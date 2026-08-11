@@ -64,7 +64,9 @@ pass. At this point the package is already worth publishing.
 | **#11** | `counts/*` rules | 2 | #10 | `over-limit` as **error**, `short` and `long` against the baseline, `too-many-hashtags` |
 | **#12** | `foldPositions` | 3 | #10, B3 | Line-aware: stops at the character budget or the third line break. Constants in **one place** with a comment saying they are observed, not specified. **Calibrated to the screenshot** |
 | **#13** | `fold/*` rules | 2 | #12 | `hook-too-long`, `hook-incomplete`, `nothing-above-fold` |
-| **#14** | `computeBaseline` | 3 | #10 | Percentiles for each statistic. `lowConfidence: true` under 10 texts. Verified against hand-computed values |
+| **#14** | `computeBaseline` | 3 | #10 | Percentiles per statistic **and per register**. `lowConfidence` when any register has under 5 contributors |
+| **#14a** | **Recency weighting + reference nomination** | 2 | #14 | `BaselineInput` with `publishedAt`, `register`, `weight`. 18-month half-life; `reference` weighted 4× and decay-exempt; `exclude` omitted. **The archive spans ~5 years — a flat mean matches no actual voice** |
+| **#14b** | Front-matter parser for `<!-- voice: ... -->` | 1 | #14a | Reads the marker out of a fixture file. Absent means `normal` |
 
 ---
 
@@ -95,7 +97,7 @@ identifiers is just a ban on bold, which is not the decision.
 | **#25** | `tells/no-specifics` | 2 | #09 | No number, named tool, API, or failure mode |
 | **#26** | The three narrowed rules | 3 | #09, B4 | `cliche-opener` **first two sentences only**; `rhetorical-close` **unanswerable only**; `tricolon-density` **density only**. Negative cases from the real posts must not fire |
 | **#27** | `doNotNormalise` | 2 | #02 | Listed patterns never flagged, and surfaced as an `info` note |
-| **#28** | **The negative-fixture suite** | 3 | #26, B4 | All four LinkedIn posts and six Medium pieces: **zero errors, zero findings from the three narrowed rules.** Runs in CI as `negatives`. If a rule fires here, the rule is wrong |
+| **#28** | **The negative-fixture suite** | 3 | #26, B4, #14b | Three tiers per qa-test-plan §4. **NEG-ESCAPE across every fixture, all years** — must never fail. **NEG-CURRENT** on recent/reference files only — the style gate. NEG-ARCHIVE reported, not asserted |
 
 **#28 is the most valuable non-escaping test in the package.** It is what keeps the linter
 usable rather than something disabled after a week.
@@ -167,13 +169,13 @@ two words. `default-src 'self'` with no external host, so the privacy claim is c
 | Phase | Points |
 | --- | --- |
 | 0a Escaping | 16 |
-| 0b Counts and fold | 15 |
+| 0b Counts and fold | 18 |
 | 0c Prohibitions and bold | 16 |
 | 0d Tells | 17 |
 | 0e Similarity | 7 |
 | 0f CLI and release | 24 |
 | 0g Landing page | 13 |
-| **Total** | **111** |
+| **Total** | **114** |
 
 **Phase 0a alone (16 points) is publishable.** A package that only escapes correctly is
 already more useful than what exists, and it is the piece Cadence needs before its own

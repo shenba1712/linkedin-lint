@@ -4,4 +4,25 @@ coverage/
 *.log
 .DS_Store
 .env*
-/.idea
+
+# ── Fixtures are LOCAL. This repo is public. ──────────────────────────────
+# The corpus is 256 published articles. Committing them here would mirror the
+# whole archive onto GitHub, search-indexable — including the ~74 deliberately
+# unlisted so Medium would not distribute them. Unlisting is a topic decision,
+# and republishing them on GitHub would override it.
+#
+# Only test/fixtures/public/ is committed: a small curated set plus the
+# synthetic worst-case file, enough for CI.
+test/fixtures/*
+!test/fixtures/README.md
+!test/fixtures/MANIFEST.md
+!test/fixtures/public/
+
+.idea/
+
+# Derived. Regenerate with scripts/profile-corpus.mjs
+profile.json
+
+# Prototypes. Findings are recorded in docs/corpus-profiling-spike.md;
+# the production feature is Cadence #P01-#P11.
+spike/

@@ -7,7 +7,7 @@ flags prose that reads as machine-written.
 **Public npm package. MIT. Pure functions and a CLI. No network, no filesystem in the
 core, no accounts.**
 
-Extracted from the private [Cadence](https://github.com/shenba1712/cadence) project,
+Extracted from the [Cadence](https://github.com/shenba1712/cadence) project,
 which depends on it.
 
 ## Current State
@@ -110,6 +110,30 @@ tricolons are **not** flagged by default. They are how good writers write. Detai
 4. If you touched escaping: `npm run test:escape` and confirm the property tests ran
 
 Never say "done" with a failing test or a type error.
+
+### Push Back, Then Discuss
+
+Disagree openly and early. A concern raised before the work is a conversation; the same
+concern raised after is wasted effort for both of us.
+
+- **If a request rests on a premise you think is wrong, say so in a sentence or two** —
+  then either propose the alternative or proceed under a stated assumption. Do not
+  silently comply with something you believe is a mistake.
+- **Take a position.** "Here are five options" is not analysis. Pick one, say why, and
+  name what it costs.
+- **Bring the disagreement, not the hedge.** If two approaches are genuinely equal, say
+  that and choose.
+- **If the point is reaffirmed after pushback, that is the decision.** Proceed fully and
+  without relitigating.
+- **Expect to be wrong sometimes.** Pushback is a discussion, not a verdict — the useful
+  outcome is often a third option neither side started with.
+
+This is bidirectional and it has already earned its place. In this project, pushback
+produced: the approval gate having no bypass, escaping shipping before the app, the
+horizons split between *job-ready* and *complete*, voice and topic being separated,
+and the corpus default flipping from opt-in to eligible-by-default. Several of those came
+from the maintainer correcting an assumption of mine; several from the reverse. None
+would have surfaced from agreement.
 
 ### Adding a Rule
 
@@ -224,4 +248,15 @@ consumers must opt in deliberately.
 
 ## Lessons Learned
 
-_(empty — add entries as they happen)_
+- **Measure a data format before writing a filter for it.** Inferring Medium's export
+  markup produced four wrong classifiers in a row; the one that worked came from reading
+  the actual files. Build the inspector first.
+
+- **Do not design around your own constraints.** "I can't read 391k words" led to a plan
+  that sampled 1.5% of the corpus. The corpus never needed to fit anywhere — one document
+  in, one record out, aggregate the records. Solve the problem, not the limitation.
+
+- **Validate a measurement before reporting it.** The profiler's first run said "closes
+  with a question: 1%", contradicting a hand reading of four posts. The measurement was
+  wrong (hashtag lines typed as the close); the real figure is 46% on LinkedIn. A number
+  that contradicts something you already know is a bug until proven otherwise.

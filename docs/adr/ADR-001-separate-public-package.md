@@ -6,15 +6,21 @@
 
 ## Context
 
-This code was written for [Cadence](https://github.com/shenba1712/cadence), a private
-LinkedIn content pipeline for one person. The question was whether any of it should be
+This code was written for [Cadence](https://github.com/shenba1712/cadence), a
+self-hosted LinkedIn content pipeline. The question was whether any of it should be
 public.
 
-Cadence itself should not be. The 60-day token wall with no programmatic refresh, a
-consolidated competitor set, and a voice model that cannot transfer to a new user all
-point the same way.
+**Amended 2026-08-11.** The original text said "Cadence itself should not be
+[public]". That was superseded the same week: Cadence is public and self-hostable
+under Apache-2.0. What it is not is a *business* — the 60-day token wall with no
+programmatic refresh, a consolidated competitor set, and a voice model that cannot
+transfer to a new user all point that way. Those are different claims, and
+conflating them was the error.
 
-But the linter is different in kind, not just degree:
+So the question this ADR answers is narrower than it first appeared: not "should
+any of it be public" but "should the linter be a **separate package**".
+
+It should, because the linter is different in kind from the app:
 
 - No OAuth, no tokens, no expiry, no per-user state, no multi-tenancy
 - No network and no filesystem in the core. Pure functions

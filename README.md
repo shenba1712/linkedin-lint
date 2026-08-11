@@ -182,11 +182,15 @@ phone, and set the numbers to what you observed.
 
 ## Why this exists
 
-It was extracted from [Cadence](https://github.com/shenba1712/cadence), a private
-LinkedIn content pipeline. The rest of that tool is not useful to anyone else — it
-depends on a personal style corpus and a 60-day token rotation. This part is useful
-to anyone posting technical content to LinkedIn through the API, so it lives here
-instead. ([ADR-001](./docs/adr/ADR-001-separate-public-package.md))
+It was extracted from [Cadence](https://github.com/shenba1712/cadence), a
+self-hosted LinkedIn content pipeline. Cadence is open too, but running it means a
+LinkedIn app, a database, and a 60-day token you re-authorise by hand — worth it if
+you want the whole pipeline, and a lot of setup if you only want your posts to survive
+the API.
+
+This part needs none of that. No accounts, no tokens, no network, works in thirty
+seconds. So it lives here as its own package.
+([ADR-001](./docs/adr/ADR-001-separate-public-package.md))
 
 ## Docs
 

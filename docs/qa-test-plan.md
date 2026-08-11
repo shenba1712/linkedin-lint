@@ -120,8 +120,23 @@ If a rule fires on genuinely good published writing, **the rule is wrong, not th
 writing.** This test is what keeps the linter usable rather than something you disable
 after a week.
 
-Fixtures: the four published LinkedIn posts, plus six Medium pieces for the longer-form
-register.
+**Scoped 2026-08-11.** The rule needed qualifying. The archive spans ~2021-2026 —
+different voices, different skill levels, some AI-assisted. "Must not fire on any
+published work" is too strong: a 2021 piece may legitimately trip `tells/flat-rhythm`
+because the author's rhythm genuinely was different then, and loosening a good rule to
+accommodate a voice they have moved on from makes the linter useless.
+
+So the suite splits:
+
+| Suite | Fixtures | Assertion |
+| --- | --- | --- |
+| **NEG-CURRENT** | Files marked `voice: reference` or `voice` unset and published within ~18 months | **Zero errors, zero findings from the three narrowed tell rules.** This is the hard gate |
+| **NEG-ESCAPE** | **Every** fixture, all years | **Zero `escape/*` errors, and every file round-trips.** Age is irrelevant here |
+| NEG-ARCHIVE | Files marked `voice: no` | Reported, not asserted. A finding here is information about how the voice changed, not a bug |
+
+NEG-ESCAPE is the one that must never fail and it uses the whole archive — old,
+odd-punctuation pieces are the *best* escaping fixtures. NEG-CURRENT is the one that
+governs whether a style rule is well-calibrated.
 
 ---
 
