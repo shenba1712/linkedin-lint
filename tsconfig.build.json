@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+
+    // The shipped build compiles WITHOUT @types/node. `process`, `Buffer` and friends
+    // are not merely discouraged in src/ — they do not resolve. ESLint bans the
+    // imports; this makes the globals unavailable too.
+    "types": []
+  },
+  "include": ["src"]
+}

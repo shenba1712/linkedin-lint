@@ -88,16 +88,13 @@ function fingerprint(html) {
   // any link back to another medium post from a footer/header region
   f.parentLink = /<footer[\s\S]{0,600}medium\.com/i.test(html);
 
-  // filename shape: Medium names files from the title
-  const base = '';
-  f.nameLen = 0;
-
+  // filename shape is measured at the call site, where the filename is in scope —
+  // the `nameLen` set here was overwritten by the spread below and never survived.
   f.titleIsBodyPrefix = titleDuplicatesBody(html);
   return f;
 }
 
 const VERBOSE = process.argv.includes('--verbose');
-const SUMMARY_FIRST = true;
 console.log(`\n${files.length} files in ${postsDir}\n`);
 
 const rows = files.map((f) => {

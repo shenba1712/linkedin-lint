@@ -1,0 +1,61 @@
+{
+  "name": "linkedin-lint",
+  "version": "0.0.0",
+  "description": "A linter and formatter for LinkedIn posts. Escapes text correctly for the versioned Posts API, shows where the \"see more\" fold cuts, and flags prose that reads as machine-written.",
+  "license": "MIT",
+  "author": "shenba",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenba1712/linkedin-lint.git"
+  },
+  "keywords": [
+    "linkedin",
+    "linter",
+    "escaping",
+    "posts-api"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "types": "./dist/index.d.ts",
+  "main": "./dist/cjs/index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:full": "vitest run --config vitest.full.config.ts",
+    "test:escape": "vitest run test/escape",
+    "check:docs": "node scripts/check-docs.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^26.2.0",
+    "eslint": "^9.39.0",
+    "globals": "^17.10.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^3.2.4"
+  }
+}

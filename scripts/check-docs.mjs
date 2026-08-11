@@ -189,11 +189,31 @@ for (const [p, text] of corpus) {
    markdown links, and the reference was in backticks. It survived in five places.
 
    Only paths whose PARENT directory already exists are checked, so planned files
-   (`src/...`, `migrations/...`) are correctly ignored until their directory appears. */
+   (`src/...`, `migrations/...`) are correctly ignored until their directory appears.
+
+   That heuristic breaks the moment a directory is created for its FIRST file: #01 adds
+   `src/index.ts`, and every other `src/*.ts` the docs mention becomes a failure even
+   though its ticket has not been worked yet. Hence PLANNED — files the docs describe and
+   a named ticket will create.
+
+   A PLANNED entry that now EXISTS is itself a failure, so the list cannot rot into a
+   permanent bypass: landing the ticket forces removing the line. */
+const PLANNED = new Map([
+  ['src/types.ts', '#02'],
+  ['src/escape.ts', '#03'],
+]);
+for (const [p, ticket] of PLANNED) {
+  if (existsSync(join(ROOT, p))) {
+    fail('planned', `${p} now exists — ${ticket} has landed, so remove it from PLANNED in scripts/check-docs.mjs`);
+  }
+}
+note(`${PLANNED.size} planned files not yet built: ${[...PLANNED].map(([f, t]) => `${f} (${t})`).join(', ')}`);
+
 for (const [p, text] of corpus) {
-  for (const m of text.matchAll(/`([a-z0-9_.\-]+(?:\/[a-z0-9_.\-]+)+\.[a-z]{2,4})`/gi)) {
+  for (const m of text.matchAll(/`([a-z0-9_.-]+(?:\/[a-z0-9_.-]+)+\.[a-z]{2,4})`/gi)) {
     const path = m[1];
     if (/^https?:|^\.\/|node_modules|^@/.test(path)) continue;
+    if (PLANNED.has(path)) continue;
     const abs = join(ROOT, path);
     if (existsSync(abs)) continue;
     if (!existsSync(dirname(abs))) continue; // directory not created yet — planned file

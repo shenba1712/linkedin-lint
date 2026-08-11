@@ -36,7 +36,7 @@ Each row is one sitting. Do not skip ahead — every one depends on the one abov
 
 | ✓ | # | Pts | Do this | Done when |
 | --- | --- | --- | --- | --- |
-| [ ] | **#01** | 2 | Scaffold: TS strict, Vitest, ESLint, ESM+CJS build | `npm test` passes on an empty suite |
+| [x] | **#01** | 2 | Scaffold: TS strict, Vitest, ESLint, ESM+CJS build | **Done 2026-08-11.** tsc, lint, test and check-docs all green. ESLint enforces the non-negotiables — verified by probe |
 | [ ] | **#02** | 1 | `src/types.ts` — `Finding`, `Severity`, `Stats`, `Baseline`, `LintOptions`, `Edit`, `Suggestion`, `Diagnostic`, `Profile` | All `readonly`, all documented. They are public API. **No `fixable`** — `fix?: Edit` replaces it |
 | [ ] | **#03** | 3 | **`escapeCommentary`** — character loop, code-point aware, `\` branch first | Table cases E1–E9 pass. **The most important ticket in the repo** |
 | [ ] | **#04** | 2 | `unescapeCommentary` | E10–E12 pass. A lone trailing backslash does not crash |
@@ -82,7 +82,7 @@ are content groups; this is the order.
 
 | Do | Phase | Pts | What |
 | --- | --- | --- | --- |
-| 2nd | **0f** | 10 | Release: build, CI, docs, publish. **Unblocks Cadence.** #42 needs B1 and B2 |
+| 2nd | **0f** | 9 | Release: verify the tarball, CI, docs, publish. **The build itself landed in #01.** **Unblocks Cadence.** #42 needs B1 and B2 |
 | 3rd | **0g** minus #46 | 11 | The landing page. The escaping demo needs nothing beyond 0a and 0f — this is what reaches someone who is not you |
 | 4th | **0b** | 23 | Counts and fold. Needs B3. Unblocks #46, then finish 0g. Carries the Profile (#52) that every later surface needs |
 | 5th | **#50** | 3 | The profiling spike. **Go/no-go on the whole tells direction** — run it before building 0c and 0d, not after |
@@ -92,12 +92,12 @@ are content groups; this is the order.
 | 9th | **0i** | 10 | `/app` — the editor and telemetry. Needs rules worth editing |
 | 10th | **0h** | 16 | The CLI. Last — nobody but you needs it, and the live page does the same job with no install |
 
-**0a + 0f + 0g is 39 points to a published package with a working public demo.** The old
+**0a + 0f + 0g is 38 points to a published package with a working public demo.** The old
 order needed 107.
 
 Three of these totals were also wrong before (0b said 15, 0d 17, 0f 24). They now match
 [docs/core/tickets.md](./docs/core/tickets.md), which `check-docs.mjs` verifies against the
-ticket rows. Total is **136**.
+ticket rows. Total is **135**.
 
 ---
 
