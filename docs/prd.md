@@ -77,7 +77,7 @@ this too long, does this read like it was generated.
 | **escape** | Escapes reserved characters for `/rest/posts` and comments. Idempotent, round-trip safe. Also `unescape` |
 | **fold** | Computes where "see more" truncates on mobile and desktop, and whether the hook survives |
 | **counts** | Characters against post and comment limits, words, paragraphs, sentence-length mean and variance, hook length |
-| **prohibitions** | Configurable banned words and phrases, em dashes, emoji, hashtag count, question-as-opening-line |
+| **style** | Configurable flagged words and phrases, em dashes, emoji, hashtag count, question-as-opening-line. Renamed from `prohibitions` in [ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) |
 | **tells** | Four heuristics for machine-written prose: flat sentence rhythm, uniform paragraphs, missing first-person stake, missing named specifics |
 | **bold** | Unicode pseudo-bold span budget, and detection of bold applied to code identifiers |
 | **similarity** | Lexical comparison against a caller-supplied archive |
@@ -90,8 +90,13 @@ Written down so they do not creep in.
 
 - **Publishing.** This package never talks to LinkedIn. It has no HTTP client and no
   concept of a token.
-- **Drafting or rewriting.** No LLM, no suggestions beyond the mechanical fixes in
-  `--fix`.
+- **Drafting or rewriting.** No LLM. **Amended 2026-08-11**: the package does offer
+  `suggestions` — concrete candidate edits with a range and a replacement — but only ones it
+  can *compute* from the text plus data it ships: unbolding via NFKC, an alternatives table,
+  which hashtags to drop and why. Anything requiring knowledge of what the author *meant*
+  needs a model and stays out ([ADR-009](./adr/ADR-009-finding-carries-edits.md) §2).
+  Generated rewrites would break this scope, though not the architecture — the package would
+  stay pure either way. That remains a separate decision, not taken.
 - **Other platforms.** The name says LinkedIn. X, Threads and Mastodon have different
   formats and different fold behaviour, and pretending one tool covers all of them
   produces a tool that is wrong everywhere.
@@ -151,30 +156,52 @@ constructions are part of their voice, and a linter that flags them is a linter 
 sands the author down. Configurable, and never on by default.
 ([ADR-003](./adr/ADR-003-calibrate-against-corpus.md))
 
+**Thresholds are measured, not personal.** `tells/flat-rhythm` and `tells/tricolon-density`
+compare against a percentile within a measured distribution of *generated* text, so a new
+user with no corpus of their own still gets a real threshold rather than a fallback
+constant. A caller-supplied baseline adds a second, personal comparison; it is never
+required. The maintainer's corpus is a test fixture, not a model, and is never used to
+judge anyone else's writing.
+([ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md))
+
+**Findings report what was measured, not what it means.** *"Sentence lengths are unusually
+uniform"* rather than *"this reads as AI"*. The first is true and actionable whether the
+writer was a model or a careful non-native speaker; the second is an accusation aimed at
+whoever the heuristic misjudges.
+
 ## 8. Success criteria
 
 | Criterion | How you would know |
 | --- | --- |
 | No truncated posts | Zero bug reports of a post publishing truncated after the escaper ran |
-| It does not annoy | Running it on the author's four published posts yields zero errors and no false warnings |
+| It does not annoy | Running it on all 13 of the author's published posts yields zero errors and no false warnings |
 | It is trusted | `error` still means "unsafe" a year later, because nothing was promoted into it |
 | Someone else uses it | A download from an account that is not the author's, and ideally an issue with a real broken post |
 | It stays small | Still zero runtime dependencies at v1.0 |
 
 ## 9. Roadmap
 
-| Phase | What lands |
-| --- | --- |
-| **0a** | `escape` and `unescape`, with property tests and real fixtures. This alone is worth publishing |
-| **0b** | `counts` and `fold`, plus the baseline helper |
-| **0c** | `prohibitions` and `bold` |
-| **0d** | `tells`, calibrated against a supplied baseline |
-| **0e** | `similarity` |
-| **0f** | CLI, docs, npm release with provenance |
-| **1** | Whatever real usage asks for. Nothing planned, deliberately |
+Phase letters are content groups. The **build order** is in
+[core/tickets.md](./core/tickets.md) and differs deliberately — the letters were being read
+as a sequence, which buried the landing page 89 points behind a package that was already
+publishable.
+
+| Order | Phase | What lands |
+| --- | --- | --- |
+| 1 | **0a** | `escape` and `unescape`, with property tests and real fixtures. This alone is worth publishing |
+| 2 | **0f** | Build, CI, docs, npm release with provenance. Unblocks Cadence |
+| 3 | **0g** | The landing page. The escaping demo needs nothing beyond 0a and 0f |
+| 4 | **0b** | `counts` and `fold`, plus the baseline helper |
+| 5 | **#50** | The profiling spike — go/no-go on whether the tell features separate at all |
+| 6 | **0c** | `style` and `bold` |
+| 7 | **0d** | `tells`, if the spike found anything |
+| 8 | **0e** | `similarity` |
+| 9 | **0i** | `/app` — the editor and telemetry |
+| 10 | **0h** | The CLI. Last, because every other surface reaches someone without it |
+| — | **1** | Whatever real usage asks for. Nothing planned, deliberately |
 
 Phase 0a is publishable on its own. A package that only escapes correctly is already
-more useful than what exists.
+more useful than what exists — and 0f plus 0g is what makes it reachable, for 21 more points.
 
 ## 10. Related documents
 

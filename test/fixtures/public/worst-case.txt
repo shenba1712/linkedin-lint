@@ -1,0 +1,13 @@
+Writing pick() is four lines. Typing it well is the difference.
+
+pick(user, ['name']) returns Pick<T, K> and not the whole { name: string } shape.
+
+Reserved: ( ) [ ] { } < > @ # * _ ~ | \ and an already-escaped \( pair.
+
+Unicode bold, serif: 𝐩𝐢𝐜𝐤 and sans: 𝗽𝗶𝗰𝗸 — neither is reserved.
+
+Emoji pass through untouched: 🚀 💡 😉
+
+A tracking link: https://example.com/x?a=(b)&c=[d]&e={f}
+
+#shenbabuilds @someone a_b_c ~tilde~ *star* |pipe|

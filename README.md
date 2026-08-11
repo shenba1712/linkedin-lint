@@ -82,7 +82,7 @@ const body = escapeCommentary(text);   // send this to /rest/posts
 | **escape** | Reserved-character escaping for the versioned Posts API. Idempotent, and round-trip safe |
 | **fold** | Where "see more" cuts on mobile and desktop. Whether the hook survives it |
 | **counts** | Characters against the post and comment limits, words, paragraphs, sentence-length variance |
-| **prohibitions** | Banned words and phrases, em dashes, emoji, hashtag count, question-as-opener |
+| **style** | Flagged words and phrases, em dashes, emoji, hashtag count, question-as-opener. *Flagged* means look at it, not you may not use it |
 | **tells** | The four signals that actually indicate machine-written prose |
 | **bold** | Unicode pseudo-bold budget, and bold on code identifiers |
 | **similarity** | Compare against an archive you supply, to catch repeating yourself |
@@ -107,13 +107,25 @@ not have the final say on how you write.
 LinkedIn has no bold. Tools fake it by substituting Mathematical Alphanumeric
 Symbols — `𝐩𝐢𝐜𝐤` is four mathematical symbols that look like p-i-c-k.
 
-That is usually fine on a label. It is genuinely bad on a **code identifier**:
+That is usually fine on a label. It is genuinely bad on a **code identifier**, and
+the primary reason is simple: **almost nobody types these characters by hand.** They
+come from a formatter, so blocking them costs no real writing anything, and what it
+catches is your tooling mangling the term your post is about.
 
-- A screen reader announces four unrelated mathematical codepoints, so the word your
-  post is about becomes unreadable.
-- **LinkedIn search will not match it.** A post whose key term is `𝐑𝐞𝐚𝐜𝐭` does not
-  contain the word "React".
-- Nobody can copy `𝐏𝐢𝐜𝐤<𝐓, 𝐊>` into an editor.
+What the mangling costs a reader:
+
+- **The bold text is not the word.** `"𝐏𝐢𝐜𝐤".includes("Pick")` is `false`, so
+  find-in-page, a search box and a docs lookup all miss it.
+- A screen reader announces unrelated mathematical codepoints rather than the term.
+  *We have not verified this on a real screen reader yet — it is on the check list.*
+- LinkedIn's search may not match it. *Also unverified, and there is reason to doubt
+  it: NFKC normalisation maps every bold variant back to plain ASCII, and search
+  indexes commonly normalise.*
+
+We would rather say which of these we have measured than assert all three. An earlier
+version of this README claimed the characters "cannot be copied into an editor and will
+not compile". That was wrong: TypeScript rejects them, **JavaScript accepts them as a
+different identifier**, and Python normalises them back and runs fine.
 
 So `bold/code-identifier` is an error, and the tool suggests the substitute that
 costs nothing: put the signature on its own line with blank lines around it.
@@ -137,9 +149,19 @@ What is flagged instead is what actually separates generated prose: flattened
 sentence-length variance, uniform paragraph blocks, no first-person stake where the
 post type calls for one, and no named specifics.
 
-Thresholds are calibrated against a baseline you provide from your own writing. Out
-of the box they use conservative defaults.
-([ADR-003](./docs/adr/ADR-003-calibrate-against-corpus.md))
+**The thresholds work out of the box.** They are measured from a corpus of *generated*
+LinkedIn posts, so a finding says "sentence rhythm flatter than 85% of the generated posts
+we measured" — a statement about the text, needing no corpus of yours and asserting nothing
+about human writing. Supplying your own posts adds a second comparison; it is never
+required.
+
+**Findings say what was measured, not who wrote it.** *"Sentence lengths are 14, 15, 13, 15,
+14 words"*, never *"this reads as AI"*. That is deliberate. Uniform rhythm, plain vocabulary
+and few contractions are also what careful and second-language English looks like, and AI
+detectors have done real damage by calling that authorship. This tool reports the
+observation and leaves the conclusion to you.
+([ADR-003](./docs/adr/ADR-003-calibrate-against-corpus.md),
+[ADR-007](./docs/adr/ADR-007-flagged-not-banned-measured-baselines.md))
 
 ## Configuration
 
@@ -150,13 +172,17 @@ of the box they use conservative defaults.
   "limits":     { "post": 3000, "comment": 1250 },
   "fold":       { "mobile": 140, "desktop": 210 },
   "bold":       { "maxSpans": 3, "allowOnCodeIdentifiers": false },
-  "prohibitions": {
+  "style": {
     "emDash": "error",
     "emoji": "warn",
     "maxHashtags": 4,
-    "words": ["delve", "game-changer", "unlock", "in today's fast-paced"]
+    // high-signal terms fire on their own
+    "words": ["delve", "game-changer", "unlock", "in today's fast-paced"],
+    // contextual terms only count toward a density threshold, never alone
+    "contextualWords": ["leverage", "crucial", "robust", "seamless"],
+    "contextualPer1k": 12
   },
-  "baseline": "./baseline.json",   // computed from your own posts
+  "baseline": "./baseline.json",   // OPTIONAL. Adds a second, personal comparison
   "archive":  "./archive/*.txt"    // for the similarity check
 }
 ```
@@ -175,10 +201,26 @@ phone, and set the numbers to what you observed.
 - **Tell detection is heuristic.** It cannot tell you whether a post is machine
   written. It can tell you that its rhythm is flat, which is a different and more
   useful claim.
+- **A flat rhythm is not evidence of anything on its own.** Uniform sentence length, plain
+  vocabulary and few contractions are also what careful, formal and second-language English
+  look like. AI detectors have caused real harm by treating that as authorship — one study
+  found they flagged a large share of TOEFL essays by non-native writers while flagging
+  almost none by US-born students. Every measured feature here has to prove it separates
+  generated-from-written more strongly than formal-from-casual before it ships, and if the
+  tool misjudges your register you can override it with a baseline from your own posts.
+- **The tell baseline is measured from generated text**, used as a stand-in for *text a
+  reader perceives as generated*. Those are close but not the same set. It carries a
+  measurement date, and it will date — vocabulary signals fastest, rhythm slowest.
 - **The similarity check is lexical**, not semantic. It catches repeated framing and
   reused phrases. It will miss the same idea expressed completely differently.
 - **It does not know your voice.** It knows the rules you gave it. The defaults are a
   starting point.
+- **Two claims behind the bold rule are still unverified** — what a screen reader announces,
+  and whether LinkedIn search matches Unicode bold. They are marked as unverified everywhere
+  they appear rather than stated as fact.
+- **The package never touches the network.** No telemetry, no analytics, no phone-home, ever.
+  The hosted web app does collect anonymous rule counters — opt-in, no content, and the
+  aggregates are published — but **none of that exists in what you install.**
 
 ## Why this exists
 
@@ -205,6 +247,7 @@ seconds. So it lives here as its own package.
 - [devops-cicd.md](./docs/devops-cicd.md) — CI, versioning, release
 - [disaster-recovery.md](./docs/disaster-recovery.md) — the bad-release playbook
 - [compliance-matrix.md](./docs/compliance-matrix.md) — licences, platform terms, claims
+- [landing-page.md](./docs/landing-page.md) · [webapp.md](./docs/webapp.md) — the hosted app
 - [adr/](./docs/adr/README.md) — decisions
 - [core/tickets.md](./docs/core/tickets.md) — the board
 

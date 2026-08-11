@@ -1,6 +1,10 @@
 # linkedin-lint — CLI Design
 
-**Status:** v1.0, 2026-08-06.
+**Status:** v1.0, 2026-08-06. **Scheduled last (Phase 0h).** Resequenced 2026-08-11: the
+library serves Cadence and the browser demo serves everyone else, so the CLI is the one
+surface with no user but the maintainer. Nothing here changes — it just gets built after the
+package is published and the demo is live. See
+[core/tickets.md](./core/tickets.md) §"Build order".
 
 There is no visual design system here — this is a library with a terminal front end.
 What it has instead is an **output contract**, because people put linters in
@@ -135,8 +139,13 @@ mobile/desktop in .linkedinlintrc.json to what you actually saw.
 
 ## 6. `--fix`
 
-Applies **only** `fixable: true` findings, which today means the `escape/*` rules.
-Nothing that requires judgement is ever auto-applied.
+Applies **only** findings that carry a `fix`, which today means the `escape/*` rules.
+Nothing that requires judgement is ever auto-applied — in particular `--fix` never applies
+`suggestions` ([ADR-009](./adr/ADR-009-finding-carries-edits.md) §1).
+
+`escape/*` fixes cannot overlap, so no conflict resolution is needed and none is built. **A
+test asserts it** — the moment a second rule becomes fixable, that test fails and whoever
+added it has to build the resolution loop.
 
 ```
 post.txt  applied 6 fixes
@@ -166,13 +175,30 @@ overwriting an unsaved draft is not a thing a linter should be able to do quietl
       "message": "\"(\" will truncate the post from here",
       "start": 412,
       "end": 413,
-      "suggestion": "escape as \\(",
-      "fixable": true
+      "advice": "escape as \\(",
+      "fix": { "start": 412, "end": 413, "replacement": "\\(" },
+      "diagnostic": { "charCode": 40 }
+    },
+    {
+      "id": "style/flagged-word",
+      "severity": "warn",
+      "message": "flagged term, 3 in 400 words",
+      "start": 88,
+      "end": 93,
+      "suggestions": [
+        { "label": "use \"look at\"", "start": 88, "end": 93, "replacement": "look at" }
+      ],
+      "diagnostic": { "termIndex": 47, "tier": 1, "count": 3, "per1k": 7 }
     }
   ],
   "summary": { "errors": 2, "warnings": 2, "info": 0 }
 }
 ```
+
+**Updated 2026-08-11** ([ADR-009](./adr/ADR-009-finding-carries-edits.md)): `fixable` is gone
+— `fix` present answers the same question — the prose field is `advice`, and `suggestions`
+and `diagnostic` are new. `diagnostic` holds **numbers only**, so a CI consumer sees the same
+safe structure the webapp transmits.
 
 Offsets here are **character offsets over the original text**, not line and column.
 Line and column are a display concern; offsets are what a programme wants.

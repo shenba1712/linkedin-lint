@@ -9,9 +9,21 @@ a normal TypeScript library.
 
 ## 1. Environments
 
-There is one: the developer's machine, plus CI. No servers, no deploys, no staging.
+**Changed 2026-08-11** ([ADR-008](./adr/ADR-008-webapp-hosting-and-telemetry.md)). There were
+none; there is now one.
 
-That is the practical benefit of a pure library. There is nothing to host.
+| Environment | What |
+| --- | --- |
+| Developer machine + CI | Everything to do with the **package**. Still no servers, no staging |
+| **Render** | The webapp — `/` and later `/app`, plus a same-origin telemetry endpoint |
+
+The package half is unchanged and still has nothing to host. The webapp is a deliberate
+exception, taken to get logs and rule-fire counters, and it carries threat-model T10 and T11
+with it.
+
+**Deployed from the release tag by the same workflow that publishes to npm**, from the same
+commit. Never by hand. That is not a convenience — it is the mitigation for T10, and it is
+what keeps the demo from running a different version than the package.
 
 ---
 
@@ -61,6 +73,8 @@ Semver, interpreted strictly, because consumers pin this exactly.
 | Severity raised, e.g. `warn` → `error` | **major** | It will start blocking someone's pipeline |
 | `Finding` field removed or retyped | **major** | |
 | `--json` field removed or changed | **major** | |
+| **`Profile` schema changed incompatibly** | **major** | It is public API and persisted on users' machines. `migrateProfile` exists so most changes are minor instead |
+| **A value type added to `Diagnostic`** | **major** | The numbers-only type is what makes "no content is transmitted" true by construction |
 | New rule added | minor | It may add warnings, but it will not block |
 | Default threshold changed | minor | Documented as defaults |
 | Severity lowered | minor | |
@@ -98,7 +112,11 @@ The release workflow:
 3. install the tarball in a clean temp dir and run the CLI
 4. npm publish --provenance --access public
 5. create the GitHub release from the tag
+6. build the webapp bundle from the same commit and deploy to Render
 ```
+
+Step 6 is in the same workflow deliberately. A demo running a different version than the
+package is worse than no demo, and a hand-deployed bundle is the T10 attack path.
 
 Step 3 runs again in the release workflow even though CI already did it. Publishing a
 broken tarball is not recoverable in the same way a bad commit is.
@@ -123,14 +141,30 @@ for typosquatting and account compromise
 {
   "files": ["dist", "bin", "README.md", "LICENSE"],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.mjs", "require": "./dist/index.cjs" },
+    ".": {
+      "import":  { "types": "./dist/index.d.ts",     "default": "./dist/index.js" },
+      "require": { "types": "./dist/cjs/index.d.ts", "default": "./dist/cjs/index.js" }
+    },
     "./package.json": "./package.json"
   },
-  "bin": { "linkedin-lint": "./bin/cli.js" },
+  "bin": { "linkedin-lint": "./bin/cli.js" },   // added in #34
   "engines": { "node": ">=18" },
   "sideEffects": false
 }
 ```
+
+**Changed 2026-08-11 in #01.** This specified `./dist/index.mjs` and `./dist/index.cjs`.
+Producing those literal filenames with `tsc` alone means renaming every emitted file **and
+rewriting the relative import specifiers inside them** — `./escape.js` would have to become
+`./escape.mjs`. That is hand-rolled source rewriting in the build of a package whose entire
+value is not corrupting text.
+
+The layout above needs no rewriting: ESM emits to `dist/`, CJS to `dist/cjs/`, and a
+two-line `dist/cjs/package.json` containing `{"type": "commonjs"}` tells Node how to read
+it. Both entry points are loaded and asserted in CI by the `pack` job.
+
+`src/` is additionally compiled with `"types": []`, so the shipped build cannot see
+`process`, `Buffer` or any other Node global — they do not resolve, on top of the ESLint ban.
 
 Fixtures, docs and tests are **not** shipped. Fixtures in particular contain post text,
 and while it is all published text, there is no reason to distribute it.
@@ -186,6 +220,11 @@ away from other changes.
 - [ ] `README.md` reflects any new rule or flag
 - [ ] `docs/rules-reference.md` updated for any new or changed rule
 - [ ] `CHANGELOG.md` entry, with anything breaking called out first
+- [ ] **No `diagnostic` value is a substring of any fixture** — the test that keeps "no
+      content is transmitted" true (ADR-009 §3)
+- [ ] **No two `fix` edits overlap** across every fixture (ADR-009 §6)
+- [ ] The webapp bundle deployed from the **same tag**, and the footer version matches the
+      published package
 
 ---
 

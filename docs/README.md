@@ -13,6 +13,7 @@ Reading order, and the gate that has to pass before code starts.
 | 3 | [trd.md](./trd.md) | Algorithms, the pure-core rule, packaging |
 | 4 | [rules-reference.md](./rules-reference.md) | Every rule with its id, severity and threshold |
 | 5 | [adr/ADR-003](./adr/ADR-003-calibrate-against-corpus.md) | Why three "AI tells" are not flagged |
+| 6 | [adr/ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) | Flagged not banned, where thresholds come from, and what a finding may claim |
 
 Then as needed:
 
@@ -26,7 +27,8 @@ Then as needed:
 | [disaster-recovery.md](./disaster-recovery.md) | A bad version reached other people |
 | [security-audit.md](./security-audit.md) | The recurring checklists |
 | [compliance-matrix.md](./compliance-matrix.md) | Licence, the trademark question, honest claims |
-| [landing-page.md](./landing-page.md) | The static demo page. The linter runs client-side, which is the whole pitch |
+| [landing-page.md](./landing-page.md) | `/` — the escaping proof. The linter runs client-side, which is the whole pitch |
+| [webapp.md](./webapp.md) | `/app`, hosting, the Profile, and telemetry. Split from landing-page.md, which was specifying two products |
 | [traceability.md](./traceability.md) | **Every risk → doc → ticket → test.** Checked by CI |
 | [core/backlog.md](./core/backlog.md) · [core/tickets.md](./core/tickets.md) | What to build next |
 
@@ -47,14 +49,20 @@ Then as needed:
 
 ### Phase 0b–0e — The rest of the rules
 - [ ] Every rule has: a rules-reference entry, a ReDoS timing test, positive fixtures, and
-      **negative fixtures from real published posts**
+      **negative fixtures from explicitly endorsed posts**
+- [ ] **The profiling spike (#50) has run** and every measured feature passed the
+      discriminant test on both axes
+- [ ] The shipped generated-text baseline carries a measurement date
 - [ ] `computeBaseline` verified against hand-computed percentiles
-- [ ] With no baseline, tell findings say so in their messages
+- [ ] With **no caller baseline**, `tells/flat-rhythm` still fires against the measured
+      distribution and names which distribution it used
+- [ ] **No finding message asserts who wrote the text**
 - [ ] `bold/code-identifier` fires on `𝐩𝐢𝐜𝐤()` and **not** on `𝐖𝐡𝐚𝐭 𝐢𝐭 𝐢𝐬:`
-- [ ] **The negatives suite:** all real posts produce zero errors and no findings from the
-      three narrowed tell rules
+- [ ] Both unverified bold claims resolved by manual check, or the rationale corrected
+- [ ] **The negatives suite:** all endorsed posts produce zero errors and no findings from
+      the three narrowed tell rules
 
-### Phase 0f — Release
+### Phase 0f — Release (built second, right after 0a)
 - [ ] `lint()` never throws on content, including empty string, 100KB, lone surrogates,
       trailing backslash
 - [ ] Every pattern completes in under 50ms on a 3,000-char pathological input
@@ -91,3 +99,15 @@ Then as needed:
 | Three "tells" are narrowed, not banned | ADR-003, prd §7, rules-reference, qa §4.2 |
 | Fixtures use published text only | threat-model T6, CLAUDE.md |
 | If a rule fires on good published writing, the rule is wrong | ADR-003, qa §4, rules-reference |
+| Nothing is banned — findings are observations | ADR-007 §1, rules-reference, README |
+| A finding states the observable, never who wrote the text | ADR-007 §6, api-spec §7, compliance C1, CLAUDE.md §8 |
+| No author's corpus is used to judge another author | ADR-007 §3, trd §8.0, CLAUDE.md §9 |
+| A measured feature ships only if it passes the discriminant test | ADR-007 §7, qa §8a, CLAUDE.md §10 |
+| Endorsement is per file and deliberate, never bulk | ADR-007 §8, qa §4, fixtures/README, B5 |
+| The **package** is network-free; telemetry lives only in the webapp | ADR-008 §Consequences, compliance §6.1, landing-page §9 |
+| No content in any telemetry payload — prefer an index into a shipped list | ADR-008 §4, webapp §6, compliance D7 |
+| `diagnostic` is numbers only, so content cannot appear structurally | ADR-009 §3, api-spec §7, devops §3 |
+| `--fix` applies `fix` only, never `suggestions` | ADR-009 §1, rules-reference, backlog "Cut" |
+| A profile sample carries no id and no text | ADR-008 §8, trd §1.1, webapp §5 |
+| Any rule that can be a failing check is one | ADR-011, CLAUDE.md, check-docs.mjs |
+| `scripts/` is not the package — tooling is exempt from the language and dependency rules | ADR-010, CLAUDE.md |

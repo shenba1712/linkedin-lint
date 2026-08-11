@@ -1,6 +1,9 @@
 # linkedin-lint — Landing Page
 
-**Status:** v1.0, 2026-08-06.
+**Status:** v1.1, 2026-08-11. **Scope narrowed.** This document now covers `/` only — the
+landing page and its escaping demo. The editor, hosting, the Profile and telemetry moved to
+[webapp.md](./webapp.md) when it became clear this file was specifying two products at once.
+Decisions in [ADR-008](./adr/ADR-008-webapp-hosting-and-telemetry.md).
 
 Follows PromptMuster's principle (`devops-cicd.md` §3.4): **a landing page is a conversion
 surface, distinct from a README's discovery job.** Positioning copy is written once and
@@ -26,17 +29,22 @@ works because the architecture is what it says it is.
 
 ## 2. Hosting
 
-**GitHub Pages, from this repo.** Static, free, no build infrastructure, and it keeps the
-public package self-contained.
+**Render.** Reversed 2026-08-11 — this said GitHub Pages, and the reason for changing is
+logs and a same-origin telemetry endpoint
+([ADR-008](./adr/ADR-008-webapp-hosting-and-telemetry.md) §1). Full detail in
+[webapp.md](./webapp.md) §2.
 
-- One HTML page plus the bundled linter. No framework needed.
-- Custom domain optional; `shenba1712.github.io/linkedin-lint` is fine to start.
+The part that does **not** change: the linter still runs client-side, and
+`default-src 'self'` still holds because the telemetry endpoint is same-origin. No external
+host is contacted.
+
+- One HTML page plus the bundled escaper. No framework needed.
 - Deployed by the same CI that publishes to npm, from the same tag, **so the demo can never
   run a different version than the package**. That mismatch would be worse than no demo.
 - The version is printed in the footer.
 
-Not on Vercel: a static page needs nothing Vercel provides, and keeping the linter's
-surface free of a hosting account is consistent with the rest of its design.
+Accepted in exchange: a recurring bill, and a service that can be down where static hosting
+could not.
 
 ---
 
@@ -56,7 +64,7 @@ surface free of a hosting account is consistent with the rest of its design.
 ├─ why it happens ─────────────────────────────────────────┤
 │  the reserved-character rule, in four lines               │
 ├─ what else it checks ────────────────────────────────────┤
-│  four cards: fold · counts · prohibitions · tells         │
+│  four cards: fold · counts · style · tells                │
 ├─ severity means something ───────────────────────────────┤
 │  the three-errors-only argument                           │
 ├─ install ────────────────────────────────────────────────┤
@@ -93,10 +101,14 @@ type.
 **Recompute on every keystroke, debounced 120ms.** Budget: under 16ms per run, which the
 linter already meets.
 
-**Nothing leaves the browser.** No analytics, no telemetry, no fetch. Stated on the page,
-next to the textarea, because someone pasting an unpublished post deserves to know that
-before they paste it — and it is the kind of claim that is easy to make and easy to verify
-when the CSP blocks every external host.
+**Your writing never leaves the browser.** Reworded 2026-08-11 — the old line was "nothing
+leaves the browser", and the new one is *more* specific rather than weaker: a sceptic can
+confirm it in devtools in ten seconds. Anonymous rule counters go to a same-origin endpoint,
+so `default-src 'self'` still blocks every external host, and no content is in the payload
+([ADR-008](./adr/ADR-008-webapp-hosting-and-telemetry.md) §3–§4).
+
+Stated next to the textarea, not in the footer, because someone pasting an unpublished post
+deserves to know before they paste.
 
 ---
 
@@ -146,8 +158,8 @@ Four cards, one line each:
 | --- | --- |
 | **The fold** | Your hook gets cut at ~140 characters on mobile. See exactly where |
 | **Counts** | Characters against the real post and comment limits, and your own length range |
-| **Prohibitions** | Banned phrases, em dashes, emoji, hashtag count — all configurable |
-| **Tells** | Flat sentence rhythm, uniform paragraphs, no specifics. Calibrated to *your* writing, not a generic list |
+| **Style** | Flagged phrases, em dashes, emoji, hashtag count — all configurable, and flagged means *look at this*, not *you may not* |
+| **Tells** | Flat sentence rhythm, uniform paragraphs, no specifics. Measured against generated posts, so it works on your first one |
 
 ### Severity
 
@@ -164,6 +176,15 @@ Four cards, one line each:
 Reused verbatim from the README. **Above the footer, not hidden**: the fold numbers are
 observed rather than documented, tell detection is heuristic and cannot identify
 AI-generated text, similarity is lexical and misses paraphrase.
+
+Two additions from [ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md), both
+stated plainly rather than glossed:
+
+- The tell baseline is measured from **generated** text as a proxy for *text a reader
+  perceives as generated*. Close, not identical. It carries a measurement date and it dates.
+- Findings say what was measured, not who wrote it. **A flat rhythm is not proof of
+  anything** — formal and second-language English can read the same way, which is how AI
+  detectors have hurt people.
 
 ---
 
@@ -199,8 +220,10 @@ post cut off"* at 11pm having just watched it happen.
 - One `<h1>`, and headings that match the questions people ask.
 - The phrases *"LinkedIn post truncated"*, *"post cut off"* and *"silently dropped"* appear
   in body copy naturally — that is what someone searches.
-- No tracking. **No analytics at all.** Adding telemetry to a package whose selling point
-  is that nothing leaves your machine would be self-defeating.
+- **No third-party tracking, ever, and no content in any payload.** Anonymous rule counters
+  go same-origin and the aggregates are published. The **npm package** remains entirely
+  network-free — telemetry exists only in the webapp layer, so anyone who installs
+  `linkedin-lint` gets code that cannot phone home.
 
 ---
 
@@ -221,7 +244,12 @@ post cut off"* at 11pm having just watched it happen.
 
 ## 9. Not doing
 
-- **No analytics or telemetry.** See §7.
+- **No third-party analytics, and no content in any payload.** Anonymous rule counters go to
+  a same-origin endpoint, and the aggregates are published on the site — see
+  [webapp.md](./webapp.md) §6. Changed 2026-08-11: this previously read "no analytics at
+  all", which was the right instinct and the wrong rule. A rule that fires constantly and is
+  always dismissed is visible at n=20, and there is no content-free way to learn it other
+  than counting.
 - **No email capture.** There is nothing to send anyone.
 - **No comparison table** against Buffer or Taplio. This is a linter, not a scheduler.
 - **No testimonials.** Nobody has used it yet, and inventing social proof would undercut

@@ -85,6 +85,39 @@ receive, and the README asks for it.
 
 ---
 
+## 2.6 Inspect the segment before trusting the metric
+
+Three wrong numbers were reported during the 2026-08 corpus spike, all the same species:
+**non-authorial text sitting where prose was expected.**
+
+| Bug | Wrong number | Real answer |
+| --- | --- | --- |
+| Hashtag lines typed as the close | "closes with a question: 1%" | 46% on LinkedIn |
+| Inline code counted as prose | "sentence variance rose 6.5 → 12" | 6.35 → 7.73 — medium, not large |
+| `Exported from Medium on…` left in all 256 files | every close-shape measurement | — |
+
+**The standing check, before reporting any corpus statistic:** print the actual text of
+the segment being measured for three documents and read it. If the segment is not what the
+metric name claims, the metric is wrong.
+
+Ten seconds each. It would have caught all three.
+
+## 2.7 The two invariants that keep content from leaking
+
+Both from [ADR-009](./adr/ADR-009-finding-carries-edits.md), both cheap, both silently stop
+being true when someone adds a rule.
+
+| Test | Asserts |
+| --- | --- |
+| **DIAG-1** | No value in any `diagnostic` is a substring of the input text, across every fixture. The numbers-only type makes this true by construction; the test catches anyone widening the type |
+| **FIX-1** | No two `fix` edits overlap, across every fixture. True today because each `escape/*` fix inserts one `\` at one reserved character's index — **reasoned, not proven**, which is why it is asserted |
+
+FIX-1 is the tripwire for `--fix`: the moment a second rule becomes fixable, it fails, and
+whoever added it has to build the overlap-resolution loop ADR-009 §6 deliberately does not
+build.
+
+---
+
 ## 3. ReDoS tests
 
 Rules are patterns over user-supplied text, running inside other people's pipelines.
@@ -114,7 +147,7 @@ baseline, and assert:
 - **Zero `error` findings**
 - **Zero findings from the three narrowed tells** (`tells/cliche-opener`,
   `tells/rhetorical-close`, `tells/tricolon-density`)
-- No `prohibitions/*` finding that contradicts the author's actual usage
+- No `style/*` finding that contradicts the author's actual usage
 
 If a rule fires on genuinely good published writing, **the rule is wrong, not the
 writing.** This test is what keeps the linter usable rather than something you disable
@@ -126,17 +159,44 @@ published work" is too strong: a 2021 piece may legitimately trip `tells/flat-rh
 because the author's rhythm genuinely was different then, and loosening a good rule to
 accommodate a voice they have moved on from makes the linter useless.
 
+**Corrected 2026-08-11 (second pass).** The paragraph above and the gate below were in direct
+conflict: the archive is acknowledged as "some AI-assisted", and the same archive was then
+used as the hard gate asserting that style rules must **not** fire. If any of those files are
+generated, tuning rules to stay silent on them trains the linter to accept exactly what it
+exists to flag.
+
+The fix is not a provenance label. The tool cannot know who wrote a text and neither can a
+reader, so provenance is irrelevant to the product
+([ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) §8). What a negative
+fixture actually asserts is **"if the linter fires on this, the linter is wrong"** — a claim
+about *desirability*, which the author can answer today about any post without recalling how
+it was written.
+
+That is what `<!-- voice: reference -->` already means. It has to be applied **deliberately,
+per file.** All 13 LinkedIn fixtures carried it from a bulk edit, which turned an endorsement
+into a default; **stripped 2026-08-11**, to be re-added one at a time.
+
 So the suite splits:
 
 | Suite | Fixtures | Assertion |
 | --- | --- | --- |
-| **NEG-CURRENT** | Files marked `voice: reference` or `voice` unset and published within ~18 months | **Zero errors, zero findings from the three narrowed tell rules.** This is the hard gate |
-| **NEG-ESCAPE** | **Every** fixture, all years | **Zero `escape/*` errors, and every file round-trips.** Age is irrelevant here |
-| NEG-ARCHIVE | Files marked `voice: no` | Reported, not asserted. A finding here is information about how the voice changed, not a bug |
+| **NEG-CURRENT** | Files **explicitly** marked `voice: reference` — deliberate, per-file endorsement. Not "unset", which means nothing was decided | **Zero errors, zero findings from the three narrowed tell rules.** This is the hard gate |
+| **NEG-ESCAPE** | **Every** fixture, all years, endorsed or not | **Zero `escape/*` errors, and every file round-trips.** Age and provenance are both irrelevant here |
+| NEG-ARCHIVE | Everything not endorsed | Reported, not asserted. A finding here is information, not a bug |
 
 NEG-ESCAPE is the one that must never fail and it uses the whole archive — old,
 odd-punctuation pieces are the *best* escaping fixtures. NEG-CURRENT is the one that
 governs whether a style rule is well-calibrated.
+
+**NEG-CURRENT now has 33 eligible fixtures**, all Medium articles — the count NEXT.md B4
+recorded all along. The discrepancy was the 13 LinkedIn tags added on top of it.
+
+**One consequence needs measuring before `#14` runs.** The 13 LinkedIn posts were the
+endorsed set's technical-register contributors. With them removed, the technical register may
+have too few endorsed contributors to clear `computeBaseline`'s five-contributor threshold,
+which would correctly flag it `lowConfidence`. The register split across the remaining 33 has
+**not** been re-measured — do that before trusting any per-register percentile, and do not
+carry forward the old "13 technical / 33 essay" figure, which counted the stripped files.
 
 ---
 
@@ -148,12 +208,15 @@ Each rule needs positive and negative cases.
 | --- | --- | --- |
 | `counts/*` | A post over the limit, one under the baseline minimum | Posts inside the measured range |
 | `fold/*` | A 200-character first sentence; a fold landing mid-word | The DynamoDB post, whose 94-character hook survives comfortably |
-| `prohibitions/*` | Each banned word; 5 hashtags; a question opener | Real posts. Specifically: `seamless` and `robust` must **not** fire, since they appear in good writing |
-| `tells/flat-rhythm` | Generated prose with uniform sentences | All ten real fixtures |
+| `style/*` | Each high-signal flagged word; 5 hashtags; a question opener; a post over the contextual-density threshold | Endorsed posts. Specifically: a single `seamless` or `robust` must **not** fire — they are contextual-tier and cannot fire alone |
+| `tells/flat-rhythm` | Generated prose with uniform sentences | Every endorsed fixture |
 | `tells/no-stake` | A `postType: 'opinion'` post with no first-person claim | A `postType: 'mechanism'` post with none — must **not** fire |
 | `tells/cliche-opener` | `X is not Y. It is Z.` as sentence one | The same shape in paragraph four — must **not** fire |
 | `tells/rhetorical-close` | "Isn't that fascinating?" | "What's another function whose type is hard to get right?" — a real invitation, must **not** fire |
 | `bold/code-identifier` | `𝐩𝐢𝐜𝐤()`, `𝐏𝐢𝐜𝐤<𝐓, 𝐊>` | `𝐖𝐡𝐚𝐭 𝐢𝐭 𝐢𝐬:` — a label, must **not** fire |
+| `counts/too-many-hashtags` | `cancun.md`'s ten tags — each dropped tag names its own reason | A post with four specific, non-overlapping tags |
+| `style/hashtag-not-camelcase` | `#traveltrivia` | `#TravelTrivia`, and single-word `#Cancun` |
+| `Profile` | A sample round-trips through export and import | **A sample contains no id and no text** — assert the key set |
 | `bold/over-budget` | 5 spans | 3 spans |
 | `similarity/*` | The same post twice | Two different posts on the same topic |
 
@@ -167,13 +230,16 @@ bold.
 
 | Case | Expected |
 | --- | --- |
-| `computeBaseline` over the four published posts | Percentiles match hand-computed values |
+| `computeBaseline` over all 13 published posts | Percentiles match hand-computed values |
 | `computeBaseline` over fewer than 10 texts | `lowConfidence: true` |
-| `lint` with no baseline | Tell findings still work, and their **messages say the fallback was used** |
-| `lint` with a baseline | Messages quote the actual baseline number |
+| `computeBaseline` where a register has under 5 contributors | `lowConfidence: true` for that register. **Likely to fire on the technical register now that the 13 LinkedIn tags are stripped** — see §4 |
+| `lint` with **no** caller baseline | `tells/flat-rhythm` and `tells/tricolon-density` still fire, against the **measured generated-text distribution**, and say which distribution they used. `counts/short` and `counts/long` stay silent — they are personal-only |
+| `lint` with a caller baseline | Messages quote both comparisons: the measured percentile *and* the author's own range |
+| Any tell finding | Message states the **observable** — "sentence lengths are 14, 15, 13, 15, 14 words" — never a verdict about who wrote it |
 
-That third row is a correctness case, not a nicety. A tool reporting "below your
-baseline" when it has no baseline is lying to the user.
+Rows four and six are correctness cases, not niceties. A tool reporting "below your
+baseline" when it has no baseline is lying to the user, and a tool reporting "this is AI" is
+asserting a fact it cannot know.
 
 ---
 
@@ -201,15 +267,84 @@ C3 and C7 are the two that make it usable in a pipeline.
 
 ## 8. Manual checks
 
-Things tests cannot cover.
+Things tests cannot cover. **The first three are not optional polish** — each one is an
+empirical claim a shipped rule currently rests on.
 
 - [ ] **Calibrate the fold.** Publish one post, screenshot on a phone, compare against
       `foldPositions`. **Adjust the constants to the observation**, not the other way
       round. It is undocumented product behaviour, so looking is the only method
+- [ ] **Screen reader on a bold code identifier.** VoiceOver or NVDA on `𝐩𝐢𝐜𝐤()`. Record what
+      is actually announced. This is the strongest of `bold/code-identifier`'s reader-harm
+      arguments and it is **currently unverified** (ADR-004)
+- [ ] **LinkedIn search against Unicode bold.** Publish a post containing `𝐑𝐞𝐚𝐜𝐭`, then search
+      LinkedIn for "React". **Currently unverified, and NFKC normalisation is a specific
+      reason to doubt it** — search indexes commonly normalise, which is the same mechanism
+      that makes `𝐩𝐢𝐜𝐤` and `pick` the same identifier in Python. If it matches, delete the
+      claim from ADR-004 and rules-reference
 - [ ] Unicode bold rendering on iOS, Android and desktop web
 - [ ] Install the published tarball in a clean directory and run the CLI. Catches a
       broken `files` list or `exports` map
 - [ ] Confirm the installed package has **zero** `node_modules` entries of its own
+
+If either bold claim fails, `bold/code-identifier` stays `error` on the guard argument —
+there is no Unicode bold in any of the 269 fixtures, so the rule costs nothing to enforce
+(ADR-004). Verifying them changes the *rationale*, not the severity.
+
+---
+
+## 8a. The discriminant test
+
+**Required for every rule that reads a measured feature**
+([ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) §7).
+
+The features that make text read as generated overlap almost entirely with the features that
+make it read as **formal or second-language English**: uniform sentence length, low lexical
+variety, taught connectives, few contractions. Published work on AI detectors found they
+flagged a large share of TOEFL essays by non-native writers while flagging almost none by
+US-born students — those detectors were measuring low perplexity, and careful non-native
+prose is low perplexity. `doNotNormalise` protects regional English from `style/*` by listing
+patterns; a statistical rule has no pattern to list, so the protection has to be a
+measurement.
+
+For each candidate feature, measure separation on **two** axes:
+
+| Axis | Question |
+| --- | --- |
+| Provenance | Does it separate generated from written? |
+| Register | Does it separate formal from casual? |
+
+**A feature that separates register as strongly as it separates provenance does not ship.**
+
+The second axis needs no new corpus: the Medium archive splits by register, so it is one
+extra column in the same histogram.
+
+---
+
+## 8b. The profiling spike, and what gates it
+
+Before any rule is built on a measured feature, run the spike in #50:
+
+1. Generate a **stratified** corpus of AI LinkedIn posts over the author's own topics,
+   labelled by prompt sophistication — naive, well-prompted, human-edited
+2. Extract features. Print **every** distribution, both axes
+3. Keep only features that separate **at the hardest tier**
+
+Stratification is the experiment, not a nicety. A corpus built from naive prompts measures
+lazy output, and a tool calibrated on lazy output flags only what people already spot
+unaided.
+
+**One prediction to test first, because it may end the whole line of work.**
+`test/fixtures/linkedin/cancun.md` is written in LinkedIn's native register — hook question,
+emoji, hashtag stack, closing invitation. Generated LinkedIn posts look the same, because
+models learned that register from posts like it. So the surface features may not separate at
+all, and the separation, if any, will live in the absence features — no cost, no asymmetry,
+no surprise — which are register-independent.
+
+If nothing separates at the hardest tier, that is the finding, and it arrives for the cost of
+a spike instead of 32 points of rules that do not work.
+
+Standing rule from §2.6 applies throughout: **print the actual text of three generated posts
+and read them** before trusting any number measured over them.
 
 ---
 

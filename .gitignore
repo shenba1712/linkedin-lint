@@ -15,14 +15,10 @@ coverage/
 # synthetic worst-case file, enough for CI.
 test/fixtures/*
 !test/fixtures/README.md
-!test/fixtures/MANIFEST.md
 !test/fixtures/public/
 
 .idea/
+.vscode/
 
-# Derived. Regenerate with scripts/profile-corpus.mjs
-profile.json
-
-# Prototypes. Findings are recorded in docs/corpus-profiling-spike.md;
-# the production feature is Cadence #P01-#P11.
-spike/
+# build info
+*.tsbuildinfo

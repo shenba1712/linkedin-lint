@@ -27,7 +27,12 @@ const allDocs = [
   ...mdFiles(join(DOCS, 'adr')),
   ...mdFiles(join(DOCS, 'core')),
 ];
-const corpus = new Map(allDocs.map((p) => [p, read(p)]));
+const rootDocs = ['CLAUDE.md', 'README.md', 'NEXT.md']
+  .map((f) => join(ROOT, f))
+  .filter((f) => existsSync(f));
+/* Root files were previously unscanned. Cadence had two stale claims survive in
+   CLAUDE.md for exactly that reason. */
+const corpus = new Map([...allDocs, ...rootDocs].map((p) => [p, read(p)]));
 const rel = (p) => relative(ROOT, p);
 
 /* ── 1. Ticket ids are unique ───────────────────────────────────────────────
@@ -82,6 +87,34 @@ if (declared) {
   fail('points', 'no **Total** row found in the summary table');
 }
 
+/* ── 3b. Phase headings and the summary table reconcile with the rows ────────
+   Three different sets of numbers existed for the same tickets: headings summed to
+   108, the summary table to 111, the rows to 114. Cadence had copied the 108. */
+{
+  const lines = tickets.split('\n');
+  let cur = null;
+  const rowSum = {}, fromHeading = {};
+  for (const l of lines) {
+    const h = l.match(/^## Phase (0[a-i]) — .*?\((\d+) pts\)/);
+    if (h) { cur = h[1]; fromHeading[cur] = Number(h[2]); rowSum[cur] ??= 0; continue; }
+    if (/^## /.test(l)) { cur = null; continue; }
+    const m = l.match(/^\|\s*\*\*#?([A-Z]?\d+[a-z]?)\*\*\s*\|[^|]*\|\s*(\d+)\s*\|/);
+    if (m && cur) rowSum[cur] += Number(m[2]);
+  }
+  const fromTable = {};
+  for (const m of tickets.matchAll(/^\| (0[a-i]) [^|]*\|\s*(\d+)\s*\|/gm)) fromTable[m[1]] = Number(m[2]);
+  for (const k of Object.keys(rowSum)) {
+    if (fromHeading[k] !== rowSum[k]) {
+      fail('phase-points', `Phase ${k} heading says ${fromHeading[k]} pts but its rows sum to ${rowSum[k]}`);
+    }
+    if (fromTable[k] !== undefined && fromTable[k] !== rowSum[k]) {
+      fail('phase-points', `summary table says Phase ${k} is ${fromTable[k]} but its rows sum to ${rowSum[k]}`);
+    }
+  }
+  const t = Object.values(rowSum).reduce((a, b) => a + b, 0);
+  if (t) note(`phase points reconcile: ${t}`);
+}
+
 /* ── 4. Rule ids are consistent, and every rule is documented ───────────────
    Rule ids are PUBLIC API — consumers suppress by id. A rename is a breaking
    change, and an undocumented rule is one nobody can suppress. */
@@ -95,7 +128,10 @@ if (existsSync(rrPath)) {
   for (const f of OTHERS) {
     const p = join(DOCS, f);
     if (!existsSync(p)) continue;
-    for (const m of read(p).matchAll(/`((?:escape|fold|counts|prohibitions|tells|bold|similarity)\/[a-z-]+)`/g)) {
+    /* `style` replaced `prohibitions` in ADR-007. `prohibitions` stays in this list so a
+       stale id anywhere is still caught by the "not documented" branch below, rather than
+       silently ignored because its group is unknown. */
+    for (const m of read(p).matchAll(/`((?:escape|fold|counts|style|prohibitions|tells|bold|similarity)\/[a-z-]+)`/g)) {
       if (!documented.has(m[1])) {
         fail('rule-ids', `${f} references \`${m[1]}\` but rules-reference.md does not document it`);
       }
@@ -106,6 +142,19 @@ if (existsSync(rrPath)) {
     const m = line.match(/^\|\s*`([a-z]+)\/([a-z-]+)`\s*\|\s*\*?\*?error/);
     if (m && !['escape', 'counts', 'bold'].includes(m[1])) {
       fail('severity', `\`${m[1]}/${m[2]}\` is error severity; only escape/*, counts/over-limit and bold/code-identifier may be`);
+    }
+  }
+  /* ADR-007 renamed prohibitions/* to style/*. Rule ids are public API, so a half-done
+     rename is worse than none: it leaves two names for one rule in a consumer's config.
+
+     An old id is allowed only on a line that also names its replacement — the shape of a
+     migration row. A bare mention anywhere else is a rename that was missed. */
+  for (const [p, text] of corpus) {
+    for (const line of text.split('\n')) {
+      const old = line.match(/`(prohibitions\/[a-z-]+)`/);
+      if (old && !/`style\/[a-z-]+`/.test(line)) {
+        fail('rule-rename', `${rel(p)} still uses \`${old[1]}\` with no replacement named on the same line; ADR-007 renamed the group to style/*`);
+      }
     }
   }
 }
@@ -131,6 +180,24 @@ for (const [p, text] of corpus) {
   for (const m of text.matchAll(/\]\((\.[^)#\s]*\.md)(#[^)]*)?\)/g)) {
     const target = resolve(dirname(p), m[1]);
     if (!existsSync(target)) fail('links', `${rel(p)} → ${m[1]} does not exist`);
+  }
+}
+
+/* ── 6b. Inline-code file paths resolve ──────────────────────────────────────
+   Finding #25 — docs referencing `seed/linkedin-content-queue.md` after it moved out
+   of the tree — was logged as fixed by check 6. It was not: check 6 only reads
+   markdown links, and the reference was in backticks. It survived in five places.
+
+   Only paths whose PARENT directory already exists are checked, so planned files
+   (`src/...`, `migrations/...`) are correctly ignored until their directory appears. */
+for (const [p, text] of corpus) {
+  for (const m of text.matchAll(/`([a-z0-9_.\-]+(?:\/[a-z0-9_.\-]+)+\.[a-z]{2,4})`/gi)) {
+    const path = m[1];
+    if (/^https?:|^\.\/|node_modules|^@/.test(path)) continue;
+    const abs = join(ROOT, path);
+    if (existsSync(abs)) continue;
+    if (!existsSync(dirname(abs))) continue; // directory not created yet — planned file
+    fail('inline-paths', `${rel(p)} references \`${path}\`, whose directory exists but the file does not`);
   }
 }
 

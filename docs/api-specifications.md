@@ -52,21 +52,31 @@ interface LintOptions {
   readonly limits?: { post?: number; comment?: number };
   readonly fold?: { mobile?: number; desktop?: number };
   readonly bold?: { maxSpans?: number; allowOnCodeIdentifiers?: boolean };
-  readonly prohibitions?: ProhibitionConfig;
+  readonly style?: StyleConfig;             // was `prohibitions`, see ADR-007
   readonly rules?: Readonly<Record<string, Severity | 'off'>>;
-  readonly baseline?: Baseline;             // from computeBaseline
+  readonly baseline?: Baseline;             // optional personal overlay
   readonly archive?: readonly string[];     // enables similarity
   readonly doNotNormalise?: readonly string[];
 }
 
 type PostType =
   | 'opinion' | 'experiment' | 'got-it-wrong' | 'build-note'
-  | 'mechanism' | 'reference' | 'announcement';
+  | 'mechanism' | 'reference' | 'announcement'
+  | (string & {});                          // open taxonomy — see below
 ```
 
-`postType` is the switch for `tells/no-stake`. The first four require a first-person
-claim; the rest do not. **Without `postType`, that rule does not fire** — plenty of
-strong technical posts contain no personal claim, so defaulting it on would be wrong.
+`postType` is the switch for `tells/no-stake`, and more generally for every **absence**
+feature: "no first-person claim" is meaningless without knowing what kind of post it is.
+The first four members require a first-person claim; the rest do not. **Without `postType`,
+those rules do not fire** — plenty of strong technical posts contain no personal claim, so
+defaulting them on would be wrong.
+
+**The taxonomy is open, not closed** ([ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) §5).
+The seven named members are the ones with defined rule behaviour; an unrecognised string is
+accepted and treated as permissive. The closed union was written for technical posts and does
+not fit everything — the trivia-and-invitation post in `test/fixtures/linkedin/cancun.md`
+matches none of the seven. A tool that detects the type, displays its guess, and lets the
+user change it is strictly better than one that silently assumes.
 
 `rules` overrides severity per id, including `'off'`. **`escape/*` cannot be turned
 off**; an attempt is ignored and produces an `info` finding saying so.
@@ -143,16 +153,27 @@ function computeStats(text: string): Stats;
 function computeBaseline(texts: readonly string[]): Baseline;
 ```
 
-`computeStats` is deterministic and pure. `computeBaseline` is the intended path for
-calibrating the `tells` thresholds: pass your own published posts, keep the result, and
-hand it back in `LintOptions.baseline`.
+`computeStats` is deterministic and pure.
 
-Without a baseline, the tell detectors fall back to conservative constants **and say so
-in their messages**. A tool reporting "below your baseline" when it has no baseline is
-lying.
+**`computeBaseline` is optional, not the intended path.** Changed 2026-08-11
+([ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) §3). The package ships a
+baseline measured from **generated** text, so `tells/flat-rhythm` and
+`tells/tricolon-density` produce a real threshold with no user corpus at all:
+
+> sentence rhythm flatter than 85% of the generated posts measured
+
+That statement asserts nothing about human writing, which is deliberate — no author's corpus
+is used to judge another author's work.
+
+Passing your own posts to `computeBaseline` adds a **second** comparison on top ("and
+flatter than your own usual range"). It is also the appeal mechanism for a writer whose
+natural register is formal enough to trip the generic threshold.
+
+`counts/short` and `counts/long` are the exception: they are personal-only and stay silent
+without a caller baseline, because "outside your usual length" has no generic equivalent.
 
 Ten or more texts are recommended. Fewer produces a `Baseline` with a
-`lowConfidence: true` flag.
+`lowConfidence: true` flag, as does any single register with fewer than five contributors.
 
 ---
 
@@ -176,17 +197,47 @@ idea expressed differently.
 
 ## 7. The `Finding` contract
 
+**Changed 2026-08-11** by [ADR-009](./adr/ADR-009-finding-carries-edits.md): `fixable` is
+removed and `fix`, `suggestions` and `diagnostic` are added. Breaking, and taken before the
+first publish while it is free.
+
 ```ts
+interface Edit {
+  readonly start: number;        // zero-based, over the ORIGINAL text
+  readonly end: number;
+  readonly replacement: string;
+}
+
+interface Suggestion extends Edit {
+  readonly label: string;        // "Remove the bold formatting"
+}
+
+type Diagnostic = Readonly<Record<string, number | readonly number[]>>;
+
 interface Finding {
   readonly id: string;
   readonly severity: Severity;
   readonly message: string;
   readonly start?: number;
   readonly end?: number;
-  readonly suggestion?: string;
-  readonly fixable?: boolean;
+  readonly advice?: string;                       // prose. was `suggestion`
+  readonly fix?: Edit;                            // auto-applicable. escape/* only
+  readonly suggestions?: readonly Suggestion[];   // offered, never auto-applied
+  readonly diagnostic?: Diagnostic;               // numbers only — safe to transmit
 }
 ```
+
+Three tiers, mirroring ESLint because the audience already knows it: `fix` is deterministic
+and applied by `--fix`; `suggestions` are concrete candidate edits offered in an editor and
+**never** auto-applied; `message` and `advice` describe the problem.
+
+`fixable` is gone because `fix !== undefined` answers the same question and cannot disagree
+with itself.
+
+**`diagnostic` admits numbers only, by type.** It carries structural facts about why a rule
+fired — `{ termIndex: 47, count: 3 }`, `{ sentenceLengths: [14,15,13,15,14] }` — so a caller
+can build a telemetry payload without touching the user's text. Content cannot appear in it
+structurally, and a test asserts no diagnostic value is a substring of the input.
 
 Guarantees consumers may rely on:
 
@@ -194,11 +245,21 @@ Guarantees consumers may rely on:
 - **Offsets are zero-based and over the original text**, not the escaped output, so a
   highlighted range matches what the user typed.
 - **`message` is one line, plain, no emoji, no trailing period.**
+- **`message` states the observable, never a verdict about authorship.** *"Sentence lengths
+  are unusually uniform — 14, 15, 13, 15, 14 words"*, never *"this reads as AI-generated"*.
+  The package cannot know who wrote a text and does not claim to
+  ([ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) §6,
+  [compliance-matrix.md](./compliance-matrix.md) C1)
 - **`severity: 'error'` means do not publish.** Only `escape/*`,
   `counts/over-limit` and `bold/code-identifier` can produce it. Nothing about voice
   ever will, so consumers can safely gate on it.
-- **`fixable: true` means `--fix` can apply it mechanically** without judgement.
-  Currently all `escape/*` rules and nothing else.
+- **`fix` present means `--fix` can apply it mechanically** without judgement. Currently all
+  `escape/*` rules and nothing else. `--fix` never applies `suggestions`.
+- **`suggestions` are offered, never automatic.** Each carries a range over the original text
+  and a replacement, so an editor can apply one on a click. Applying one changes offsets — the
+  caller re-lints after each.
+- **`diagnostic` contains numbers only** and is safe to transmit. It is the one field designed
+  to leave the machine ([ADR-008](./adr/ADR-008-webapp-hosting-and-telemetry.md) §4).
 
 ---
 

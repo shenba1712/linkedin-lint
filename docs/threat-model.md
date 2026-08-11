@@ -92,10 +92,25 @@ personal style corpus.
 
 - **Fixtures use already-published posts only.** Stated as a rule in `CLAUDE.md` and
   checked at review.
-- No baseline file, no archive, no style guide is committed here. Those are caller-
-  supplied data, which is one of the reasons the core takes them as arguments.
-- No configuration containing the author's personal prohibition list ships in the
-  package. Defaults are deliberately generic.
+- No **personal** baseline, no archive, no style guide is committed here. Those are
+  caller-supplied data, which is one of the reasons the core takes them as arguments.
+- No configuration containing the author's personal word list ships in the package.
+  Defaults are deliberately generic.
+
+**Sharpened by [ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md).** One
+baseline now *does* ship — the distribution measured from **generated** text — and the
+distinction is the point of the decision, so it must not blur:
+
+| Ships | Never ships |
+| --- | --- |
+| The generated-text distribution, with a measurement date | Any distribution computed from the author's own writing |
+| Generic flagged-word tiers | The author's personal word list |
+
+The shipped baseline describes generated posts. It describes no human's writing, which is
+what makes it safe to ship and is also why *"you shouldn't use my writing to gauge anyone
+else's"* is satisfied by construction rather than by policy. A future change that computes
+the shipped baseline from human text — the author's or anyone's — reopens T6 and is a
+decision, not a refactor.
 
 ### T7 — Typosquatting
 
@@ -117,6 +132,60 @@ The package cannot know either of those things, and implying it can would be dis
 - Fold positions print with a `~` and a footer saying they are approximate.
 - Tell findings say plainly that they measure rhythm, not authorship.
 - The README has an explicit "Honest limits" section.
+
+### T9 — A tell finding used against a writer
+
+The mirror of T8, and the one with a named victim. A `tells/*` finding says something about
+*text*. Quoted at someone — by a manager, an editor, a reviewer — it becomes a claim about a
+*person*, and the people it misjudges are disproportionately those writing formal or
+second-language English, whose prose shares nearly every feature with generated text.
+Published work on AI detectors found they flagged a large share of TOEFL essays by non-native
+writers while flagging almost none by US-born students.
+
+Unlike T1 and T2, no attacker is required. The harm arrives through the tool working exactly
+as designed and being read as more than it is.
+
+- **Message wording is the primary control**, not documentation. A finding states the
+  observable — "sentence lengths are 14, 15, 13, 15, 14 words" — never a verdict about
+  authorship ([ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) §6). A
+  message that cannot be quoted as an accusation cannot be misused as one.
+- **The discriminant test** keeps register out of the feature set: a feature separating
+  formal-from-casual as strongly as generated-from-written does not ship
+  ([qa-test-plan.md](./qa-test-plan.md) §8a).
+- **Everything here is `warn` or `info`, permanently.** No `tells/*` rule may ever become
+  `error`, so no consumer can gate publishing on it.
+- **No aggregate "AI score"** — see [core/backlog.md](./core/backlog.md), where a score out
+  of ten is already cut. A single number is the form most easily quoted at someone.
+
+This is the risk that argues hardest against ever adding a real detector, independent of
+whether the zero-dependency rule already makes one impossible.
+
+### T10 — A compromised web service exfiltrating unpublished drafts
+
+Added 2026-08-11 with the move to Render
+([ADR-008](./adr/ADR-008-webapp-hosting-and-telemetry.md)).
+
+People paste drafts they have **not decided to publish** — that is the use case, not an edge
+case. A modified bundle could ship them anywhere, and **same-origin CSP is no defence when the
+origin is the attacker.** Static hosting had the same failure mode with a much smaller surface
+to own; a service adds an account, a deploy pipeline and a runtime to compromise.
+
+- **Deploy from the release tag only, never by hand.** The same discipline already applied to
+  npm publishing, for the same reason
+- The bundle is built by the same CI that publishes the package, from the same commit
+- **The server never lints.** It serves files and accepts counters. There is no code path in
+  which post text reaches it except sentence sharing, which is opt-in, capped and logged in a
+  user-visible ledger
+- Sentence-sharing retention is short and deletion is answerable, so a compromise has a small
+  window of held content to take
+
+### T11 — Availability
+
+Static hosting does not go down. A service does, and a free tier spins down cold.
+
+The exposure is bounded: the package is unaffected, Cadence is unaffected, and only the demo
+is lost. Worth stating because the previous hosting choice made this risk zero, and the
+decision to accept it should be visible rather than discovered during an outage.
 
 ---
 

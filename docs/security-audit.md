@@ -37,7 +37,9 @@ Every item maps to a threat in [threat-model.md](./threat-model.md).
 - [ ] Every real published post round-trips through escape and unescape (T3)
 - [ ] **If escaping behaviour changed, this is a major version** (T3)
 - [ ] No fixture contains unpublished text (T6)
-- [ ] No personal prohibition list or baseline shipped in the package defaults (T6)
+- [ ] No personal word list, and **no baseline computed from human writing**, shipped in the
+      package defaults. The generated-text distribution is the one baseline that may ship,
+      and it carries a measurement date (T6, ADR-007 §3)
 - [ ] `npm pack`, install the tarball in a clean directory, run the CLI
 - [ ] Publishing from CI only, with provenance enabled (T2)
 

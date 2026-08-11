@@ -49,7 +49,9 @@ and reputation is the actual asset here.
 
 | # | Claim risk | How it is handled |
 | --- | --- | --- |
-| C1 | Implying it detects AI-written text | It cannot, and the docs say so. Findings report **flat rhythm**, which is a narrower, true claim |
+| C1 | Implying it detects AI-written text | It cannot, and the docs say so. **Findings state the observable, not the verdict** — "sentence lengths are unusually uniform", never "this reads as AI". Enforced as a message rule, not just a policy (ADR-007 §6) |
+| C1a | A generic baseline misjudging non-native or formal English | The features that read as generated overlap with those that read as second-language English; detectors have caused real harm this way. Handled by a **discriminant test** — a feature that separates register as strongly as provenance does not ship (qa §8a) — and by the personal baseline as an appeal mechanism |
+| C1b | Implying the measured baseline is of "AI writing" as such | It is measured from *generated* text, used as a proxy for *text a reader perceives as generated*. Close, not identical. Stated in Honest Limits rather than glossed |
 | C2 | Implying the fold positions are exact | Printed with a `~`, documented as observed rather than specified, configurable, and the CLI footer tells you to calibrate |
 | C3 | Implying character limits are official | Documented as defaults to verify, since LinkedIn does not publish them and they drift |
 | C4 | Implying escaping guarantees a good post | The verdict is **"Safe to publish"**, never "Good post". No score out of ten |
@@ -94,6 +96,13 @@ output that is itself hard to read.
 
 ## 6. Privacy
 
+**Rewritten 2026-08-11** ([ADR-008](./adr/ADR-008-webapp-hosting-and-telemetry.md)). This
+section previously read *"Does it collect anything? No. Ever."* That is still true of the
+**package** and no longer true of the **webapp**, and the distinction is the whole of this
+section.
+
+### 6.1 The npm package
+
 | # | Item | Position |
 | --- | --- | --- |
 | D1 | Does it collect anything? | **No.** No telemetry, no analytics, no phone-home. Ever |
@@ -101,8 +110,28 @@ output that is itself hard to read.
 | D3 | Does user text leave the machine? | **No.** No network access exists in the package |
 | D4 | Fixtures in the repo | Published posts only. No unpublished drafts, no personal baseline, no style corpus |
 
-D1 deserves emphasis: adding telemetry to a linter would be a betrayal of the one thing
-that makes a zero-dependency pure-function package trustworthy.
+D1–D3 are load-bearing: anyone who runs `npm i linkedin-lint` gets code that **cannot** phone
+home. Telemetry lives only in the webapp layer, or ADR-005 and threat-model T4 both collapse.
+
+### 6.2 The webapp
+
+| # | Item | Position |
+| --- | --- | --- |
+| D5 | Where does linting happen? | **In the browser.** The server delivers files and receives counters; it never lints |
+| D6 | Anonymous counters | Rule id, `fired`/`dismissed`/`accepted`, numeric `diagnostic`, post type, session id. **Opt-in.** Same-origin, so `default-src 'self'` holds |
+| D7 | Content in the counter payload | **Never.** `diagnostic` is numbers-only by type; curated-list rules send an index, never the matched word |
+| D8 | Sentence sharing | **Separate opt-in.** Max 3 sentences per session, sentence granularity only, visible ledger, viewable and deletable |
+| D9 | The profile | `localStorage`, exportable. Samples carry no id and no text. **Not fully anonymous** — a sentence-length distribution is a weak fingerprint, and that is stated where export is offered |
+| D10 | Server logs | Contain IP addresses whether or not we want them. **Personal data.** Short retention, truncated where Render allows |
+| D11 | Legal basis | **Consent**, obtained separately for counters and for sentence sharing, each worded for its purpose |
+| D12 | Privacy notice | **Required**, and separate from T&C — a contract does not discharge it |
+| D13 | Deletion and data-subject requests | Required once sentences are held. Must be answerable |
+| D14 | Published aggregates | Rule-fire and dismissal rates go on the site — the proof of D6 and D7, and the project's only outside check on rule calibration |
+
+D8 is where the privacy claim becomes conditional. "Your writing never leaves your browser"
+holds by default; with sentence sharing on it becomes *"here is exactly what is sent, and you
+can see and delete every one."* The ledger is what makes that defensible rather than a
+promise.
 
 ---
 

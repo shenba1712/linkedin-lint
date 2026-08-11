@@ -15,7 +15,7 @@
       ├── escape.ts        escapeCommentary · unescapeCommentary
       ├── fold.ts          foldPositions · hookSurvives
       ├── counts.ts        computeStats
-      ├── prohibitions.ts  banned words, em dash, emoji, hashtags, opener
+      ├── style.ts         flagged words, em dash, emoji, hashtags, opener
       ├── tells.ts         four detectors, against a baseline
       ├── bold.ts          span budget, code-identifier detection
       └── similarity.ts    compare against a caller-supplied archive
@@ -23,6 +23,39 @@
 
 Everything under `src/` is a pure function. No `fs`, no `http`, no `path`, no
 `Date.now()`, no `Math.random()`.
+
+### 1.1 Three layers, not two
+
+Added 2026-08-11 ([ADR-008](./adr/ADR-008-webapp-hosting-and-telemetry.md) §8). Describing the
+package as "pure core plus `bin/cli.ts`" left every surface to invent its own state handling,
+so the webapp, the CLI, an MCP server and Cadence would each pick a baseline format and drift.
+
+| Layer | Holds | Pure |
+| --- | --- | --- |
+| **Core** | `lint`, `escapeCommentary`, `computeStats` — text in, findings out | yes |
+| **Profile** | baseline, preferences, `doNotNormalise`, rule overrides, samples | **yes** |
+| **Adapters** | a file, `localStorage`, an MCP resource, a Cadence row | no — that is their job |
+
+State is pure when it is passed in and returned out:
+
+```ts
+createProfile()                    → Profile
+addSample(profile, stats, meta)    → Profile
+baselineFrom(profile)              → Baseline
+mergeProfiles(a, b)                → Profile
+migrateProfile(old)                → Profile
+```
+
+Dates arrive as arguments, so no clock is read. `lint(text, options)` is unchanged — the
+package now ships the code to *manage* `options.baseline` instead of leaving three surfaces to
+reinvent it.
+
+**A sample is `{ date, register, weight, featureVector }` — no id, no title, no text.** A post
+cannot be reconstructed from it. That shape is the firewall against
+profile → preferences → history → queue, and it is assertable in a test.
+
+The `Profile` schema is **public API** and versioned like rule ids, which is why
+`migrateProfile` exists rather than being assumed.
 
 Where a rule needs data from outside — an archive for similarity, a baseline for
 tells — **the caller passes it in**. The core never fetches anything. That is what
@@ -33,14 +66,26 @@ makes the whole package testable without mocks and safe for other people to inst
 ```ts
 export type Severity = 'error' | 'warn' | 'info';
 
+export interface Edit {
+  readonly start: number;       // zero-based, over the ORIGINAL text
+  readonly end: number;
+  readonly replacement: string;
+}
+export interface Suggestion extends Edit {
+  readonly label: string;
+}
+export type Diagnostic = Readonly<Record<string, number | readonly number[]>>;
+
 export interface Finding {
   readonly id: string;          // "escape/unescaped-paren" — PUBLIC API
   readonly severity: Severity;
   readonly message: string;     // one line, plain, no emoji
   readonly start?: number;      // zero-based, over the ORIGINAL text
   readonly end?: number;
-  readonly suggestion?: string; // what to do instead
-  readonly fixable?: boolean;   // whether --fix can apply it
+  readonly advice?: string;     // prose. what to do instead
+  readonly fix?: Edit;          // --fix applies this. escape/* only
+  readonly suggestions?: readonly Suggestion[];  // offered, never automatic
+  readonly diagnostic?: Diagnostic;              // numbers only. safe to transmit
 }
 
 export interface Stats {
@@ -180,7 +225,12 @@ flattens. It is the basis of `tells/flat-rhythm`.
 **Paragraph-length coefficient of variation** (standard deviation over mean) rather
 than raw deviation, so it is comparable across posts of different lengths.
 
-## 6. Prohibitions
+## 6. Style
+
+Renamed from "Prohibitions" in
+[ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) — nothing here is
+prohibited, three of these ship off by default, and a finding is an observation rather than
+a verdict.
 
 A configurable list, checked case-insensitively with word boundaries.
 
@@ -188,7 +238,7 @@ Categories:
 
 | Check | Notes |
 | --- | --- |
-| Banned words and phrases | Fully configurable. Defaults are conservative |
+| Flagged words and phrases | Fully configurable. **Tiered**: high-signal terms fire on presence, contextual terms only contribute to a density score. The list may be large, because size no longer drives false positives |
 | Em dash | Configurable severity. Some authors ban it outright, others use it |
 | Emoji | Detected by Unicode property escapes, not a hard-coded list |
 | Hashtag count | Above a configured maximum |
@@ -210,8 +260,14 @@ Contiguous runs are one **span**.
 
 ### 7.2 Code-identifier detection
 
-The interesting part. A bold span is a code identifier if, once mapped back to plain
-ASCII, it:
+The interesting part. **Mapping back to plain ASCII is `String.prototype.normalize('NFKC')`**
+— measured 2026-08-11, the serif, sans-serif and italic variants of `𝐏𝐢𝐜𝐤<𝐓, 𝐊>` all
+normalise to exactly `Pick<T, K>`. Built in, no range tables, no dependency. It is used for
+*classification only*, after span detection, because it destroys variant information that
+`bold/mixed-variants` needs, is not length-preserving, and folds unrelated characters
+(`ﬁ`→`fi`, `¼`→`1⁄4`). Never near `escape.ts`.
+
+A bold span is a code identifier if, once mapped back to plain ASCII, it:
 
 - contains `()`, `<>`, `[]`, `_`, or `.` adjacent to alphanumerics, or
 - is camelCase or PascalCase, or
@@ -224,27 +280,52 @@ one place where a false positive is likely.
 
 ### 7.3 Why this is an `error`
 
-Because the cost falls on other people: a screen reader cannot read the term, and
-LinkedIn search cannot index it. Every other voice rule costs only the author.
+Primarily because it costs nothing to enforce: there is **no Unicode bold anywhere in the
+269 published fixtures** (verified 2026-08-11), so the rule guards against bold the *tooling*
+would insert rather than policing a human habit. Blocking output that nothing legitimate
+produces has no false-positive cost.
+
+Supporting, and stated with the confidence each has earned: a screen reader cannot announce
+the term (**unverified**), and LinkedIn search is believed not to match it (**unverified**,
+and NFKC normalisation is a reason to doubt it). Both are on the manual-check list in
+[qa-test-plan.md](./qa-test-plan.md) §8 and must be run before `#21` ships.
 ([ADR-004](./adr/ADR-004-bold-budget-is-an-error.md))
 
 ## 8. Tells
 
-Four detectors, each comparing a statistic against a baseline the caller supplies.
+Four detectors. Two read a measured distribution; two are fixed or caller-gated.
 
 | Id | Test | Default threshold |
 | --- | --- | --- |
-| `tells/flat-rhythm` | `sentenceLenStdDev` below baseline `p15` | conservative fallback if no baseline |
-| `tells/uniform-paragraphs` | `paragraphLenCv` below 0.25 | fixed |
+| `tells/flat-rhythm` | `sentenceLenStdDev` below `p15` of the **measured generated-text distribution** | shipped, no user corpus needed |
+| `tells/uniform-paragraphs` | `paragraphLenCv` below 0.25 | fixed constant |
 | `tells/no-stake` | No first-person experience claim, when `options.postType` requires one | off unless `postType` is given |
-| `tells/no-specifics` | No number, named tool, API, or failure mode | on |
+| `tells/no-specifics` | No number, named tool, API, or failure mode | on, **gated by post type** (ADR-007 §4) |
 
-Without a baseline the thresholds fall back to conservative constants, and the
-findings say so in the message. A tool that reports "below your baseline" when it has
-no baseline is lying.
+### 8.0 The threshold is one-sided and measured
 
-`computeBaseline(texts): Baseline` is exported so a caller can generate one from their
-own corpus. That is the intended path.
+The shipped baseline is measured from **generated** LinkedIn posts, not from human writing.
+A finding therefore says:
+
+> sentence rhythm flatter than 85% of the generated posts measured
+
+That is complete, checkable, and asserts nothing about human writing at all. It needs no
+human reference corpus, which removes the over-fitting problem rather than mitigating it —
+the maintainer's writing is a test fixture and is never used to judge anyone else's
+([ADR-007](./adr/ADR-007-flagged-not-banned-measured-baselines.md) §3).
+
+`computeBaseline(texts): Baseline` is still exported, and a caller who supplies one gets a
+**second, additive** comparison — "and flatter than your own usual range". It is never a
+prerequisite. `counts/short` and `counts/long` are the exception: they are personal-only and
+stay silent without a caller baseline, because "outside your usual length" has no generic
+equivalent.
+
+**The generated corpus is a proxy and is labelled as one.** The tool models how a post reads
+*to a reader*; "text a model produced" and "text a reader perceives as generated" are close
+but not identical, and the gap belongs in Honest Limits.
+
+**The baseline carries its measurement date.** Vocabulary signals rot fastest and variance
+signals slowest, so a stale baseline degrades unevenly and silently.
 
 ### 8.1 The three patterns that are not flagged
 

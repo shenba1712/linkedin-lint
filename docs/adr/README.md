@@ -13,5 +13,10 @@ Format: Status / Context / Decision / Consequences.
 | [004](ADR-004-bold-budget-is-an-error.md) | Bold on code identifiers is an error, not a warning | 🟢 Accepted |
 | [005](ADR-005-zero-dependencies-pure-core.md) | Zero runtime dependencies and a pure core | 🟢 Accepted |
 | [006](ADR-006-lexical-not-semantic-similarity.md) | Similarity is lexical, not semantic | 🟢 Accepted |
+| [007](ADR-007-flagged-not-banned-measured-baselines.md) | Flagged, not banned — measured baselines and observable findings | 🟢 Accepted |
+| [008](ADR-008-webapp-hosting-and-telemetry.md) | The webapp — hosting, telemetry, and the Profile layer | 🟢 Accepted |
+| [009](ADR-009-finding-carries-edits.md) | A Finding carries applicable edits and a safe diagnostic | 🟢 Accepted |
+| [010](ADR-010-typescript-and-the-toolchain-boundary.md) | TypeScript, and what the toolchain is exempt from | 🟢 Accepted |
+| [011](ADR-011-rules-are-enforced-not-reviewed.md) | Every rule that can be a failing check is one | 🟢 Accepted |
 
 Update this index whenever an ADR is added or its status changes.

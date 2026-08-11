@@ -35,19 +35,23 @@ property tests pass.
 - [ ] `hookSurvives`
 - [ ] `fold/hook-too-long`, `fold/hook-incomplete`, `fold/nothing-above-fold`
 - [ ] `computeBaseline` with `lowConfidence`
+- [ ] **The Profile layer** — pure, portable, one JSON format for CLI, web, MCP and Cadence.
+      Samples carry no id and no text
+- [ ] `counts/too-many-hashtags` names the tags with a reason each, not "drop the last N"
 
 **Exit:** the fold preview matches a real screenshot, and the constants are set to what
 was observed rather than what was assumed.
 
 ---
 
-## Phase 0c — Prohibitions and bold
+## Phase 0c — Style and bold
 
-- [ ] Banned words and phrases, configurable
+- [ ] Flagged words and phrases, configurable, **two tiers** — high-signal fires on
+      presence, contextual counts toward density only
 - [ ] Em dash, emoji, hashtag count, question-opener — all configurable, conservative
       defaults
 - [ ] Colon rules, including the numbered-list exception
-- [ ] `prohibitions/self-label-opener`
+- [ ] `style/self-label-opener`
 - [ ] Unicode pseudo-bold span detection, both serif and sans-serif ranges
 - [ ] Code-identifier detection
 - [ ] `bold/code-identifier` as **error**, with the whitespace-isolation suggestion
@@ -59,7 +63,11 @@ was observed rather than what was assumed.
 
 ## Phase 0d — Tells
 
-- [ ] `tells/flat-rhythm` against a baseline
+- [ ] **The profiling spike (#50) — run this first.** A stratified generated corpus, every
+      distribution printed on both axes. If nothing separates at the hardest tier, the rest
+      of this phase is cut rather than built
+- [ ] The measured generated-text baseline, shipped with a measurement date
+- [ ] `tells/flat-rhythm` against the measured distribution
 - [ ] `tells/uniform-paragraphs`
 - [ ] `tells/no-stake`, scoped by `postType`
 - [ ] `tells/no-specifics`
@@ -71,7 +79,9 @@ was observed rather than what was assumed.
 - [ ] **The negative-fixture suite** — real posts produce zero errors and no false
       warnings
 
-**Exit:** all four published posts and six Medium pieces pass clean.
+**Exit:** every **explicitly endorsed** fixture passes clean. Not "all 269" — endorsement is
+per file and deliberate, and a corpus of unestablished provenance cannot prove a style rule
+is well-calibrated (ADR-007 §8).
 
 ---
 
@@ -84,20 +94,34 @@ was observed rather than what was assumed.
 
 ---
 
-## Phase 0f — CLI and release
+## Phase 0f — Release
+
+**Built second, right after 0a.** Cadence is blocked on it, and the landing page needs it.
+
+- [ ] ESM plus CJS build, `exports` map, `files` list
+- [ ] `deps` CI job — zero runtime dependencies, hard failure
+- [ ] `pack` CI job — install the tarball and run the CLI
+- [ ] README, LICENSE, CHANGELOG
+- [ ] npm publish from CI with provenance and 2FA
+
+**Exit:** install the tarball in a clean directory and `escapeCommentary` the `pick()` post.
+
+---
+
+## Phase 0h — CLI
+
+**Built last.** Every other surface reaches someone without it, and once the live page exists
+it does the same job with no install.
 
 - [ ] `bin/cli.ts` — the only I/O
+- [ ] `lint()` orchestration — never throws on content
 - [ ] Default human-readable output
 - [ ] `--escape`, `--fold`, `--fix`, `--json`, `--baseline`, `--stdin`
 - [ ] Config discovery, with unknown keys as an error
 - [ ] Colour, `NO_COLOR`, non-TTY handling
 - [ ] Exit codes 0, 1, 2
-- [ ] ESM plus CJS build, `exports` map, `files` list
-- [ ] `deps` CI job — zero runtime dependencies, hard failure
-- [ ] `pack` CI job — install the tarball and run the CLI
-- [ ] ReDoS timing assertions on every pattern
-- [ ] README, LICENSE, CHANGELOG
-- [ ] npm publish from CI with provenance and 2FA
+- [ ] ReDoS audit — every pattern has a timing assertion. Individual tests land with their
+      rules, per rules-reference §"Adding a rule"
 
 **Exit:** `npm i -g linkedin-lint`, run it on the `pick()` post, see the escaping it
 needs.
@@ -128,5 +152,6 @@ Recorded so they are decisions rather than gaps.
 - [-] **Claiming to detect AI-written text.** It cannot, and saying so would be dishonest
 - [-] **Telemetry.** Never. It would betray the one thing that makes a zero-dependency
       pure-function package trustworthy
-- [-] **A rule auto-fixer for style findings.** Only `escape/*` is `fixable`. Anything
-      needing judgement stays with the author
+- [-] **A rule auto-fixer for style findings.** Only `escape/*` carries a `fix`. Style rules
+      offer `suggestions` — a range and a replacement an editor can apply on a click — but
+      `--fix` never applies them. Anything needing judgement stays with the author
