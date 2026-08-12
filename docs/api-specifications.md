@@ -212,7 +212,8 @@ interface Suggestion extends Edit {
   readonly label: string;        // "Remove the bold formatting"
 }
 
-type Diagnostic = Readonly<Record<string, number | readonly number[]>>;
+type DiagnosticKey = `${string}.${string}`;   // group.field — the dot is required
+type Diagnostic = Readonly<Record<DiagnosticKey, number | readonly number[]>>;
 
 interface Finding {
   readonly id: string;
@@ -235,7 +236,7 @@ and applied by `--fix`; `suggestions` are concrete candidate edits offered in an
 with itself.
 
 **`diagnostic` admits numbers only, by type.** It carries structural facts about why a rule
-fired — `{ termIndex: 47, count: 3 }`, `{ sentenceLengths: [14,15,13,15,14] }` — so a caller
+fired — `{ "flaggedWord.termIndex": 47 }`, `{ "rhythm.sentenceLengths": [14,15,13,15,14] }` — so a caller
 can build a telemetry payload without touching the user's text. Content cannot appear in it
 structurally, and a test asserts no diagnostic value is a substring of the input.
 

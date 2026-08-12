@@ -24,11 +24,11 @@ test that proves it. Add a row when a risk is accepted; never delete one.
 | 22 | A generic AI baseline flags formal and non-native English, the documented failure of every detector. `doNotNormalise` cannot protect against a statistical rule | ADR-007 §7, qa §8a, threat-model T9 | #50 | discriminant test, both axes |
 | 25 | A `tells/*` finding quoted at a writer becomes an accusation. No attacker needed — the tool working as designed is the mechanism | threat-model T9, ADR-007 §6 | #22, #51 | message-wording test, qa §6 |
 | 26 | ADR-003's tricolon figures (99% of articles, 9.68 per 1,000 words) were measured by a script that is not in the repo, so they cannot be reproduced or re-run | ADR-003 §Context | #50 | re-measure in the spike |
-| 27 | A telemetry payload assembled per-surface eventually includes user text by accident | ADR-009 §3, ADR-008 §4 | #02, #57 | `diagnostic` is numbers-only by type; test asserts no value is a substring of the input |
+| 27 | A telemetry payload assembled per-surface eventually includes user text by accident | ADR-009 §3, ADR-008 §4 | #02a, #57 | `diagnostic` is numbers-only by type; test asserts no value is a substring of the input |
 | 28 | A compromised web service exfiltrates unpublished drafts; same-origin CSP is no defence when the origin is the attacker | threat-model T10, ADR-008 | #58 | deploy from the release tag only, never by hand |
 | 29 | Server access logs hold IP addresses — personal data — where the project previously held none | threat-model T10, compliance D10–D13 | #58 | short retention, truncated IPs, privacy notice |
 | 30 | The privacy claim becomes conditional once sentences are shared, and a checkbox nobody remembers is not consent | ADR-008 §6, compliance D8 | #57 | visible ledger, viewable and deletable; 3/session cap |
-| 31 | `fixable: boolean` could disagree with the fix it described | ADR-009 §1 | #02, #08 | field removed; `fix !== undefined` is the test |
+| 31 | `fixable: boolean` could disagree with the fix it described | ADR-009 §1 | #02a, #08 | field removed; `fix !== undefined` is the test |
 | 32 | Two `fix` edits overlapping would corrupt the text `--fix` exists to protect | ADR-009 §6 | #08 | test asserts no two fixes overlap across every fixture |
 | 33 | The Profile grows into post history and becomes a second Cadence | ADR-008 §8, webapp §4 | #52, #55 | sample shape `{date, register, weight, featureVector}` asserted in a test — no id, no text |
 | 34 | The language choice had no record, though it forecloses Rust and is what makes the 60KB browser budget meetable | ADR-010 | #01, #44 | bundle size checked in #44 |
@@ -46,6 +46,13 @@ test that proves it. Add a row when a risk is accepted; never delete one.
 | 15 | Three different point totals existed for the same tickets — headings 108, summary table 111, rows 114. Cadence and the roadmap both copied 108 | tickets §Totals | — | check §3b, `phase-points` |
 | 16 | ADR-003 and ADR-004 each asserted a corpus fact that was false at 13 posts: "all four close with a question" (really 3 of 13) and "the author already uses Unicode bold" (zero, anywhere) | ADR-003 §Recalibration, ADR-004 §Context | #14 | re-fit `computeBaseline` over 13 |
 | 17 | Root files were never scanned by `check-docs.mjs` | — | — | corpus now includes `CLAUDE.md`, `README.md`, `NEXT.md` |
+| 39 | A flat `Diagnostic` namespace collides the moment 38 rules' payloads are merged — half of them want `count`, `index`, `per1k` | ADR-009 §3 | #02a, #57 | `DiagnosticKey` requires a dot; verified TS2353 on a bare key |
+| 40 | One payload type with an optional `sentence?` field is a field somebody eventually populates by accident | ADR-012 §3 | #57 | two types, two consent gates, two transport calls |
+| 41 | Personalization learns what a user *ignores*, not what is *right* — a tool learned into silence still says "Safe to publish" | ADR-012 §6 | #56 | `N rules muted for you` beside the verdict; learning resettable |
+| 42 | Learning could mute the publishing gate, making `lint()` irreproducible across users of one version | ADR-012 §5 | #56 | `warn`/`info` only; `escape/*` exempt from all adaptation |
+| 43 | `#28` run against a maintainer's own learned install would test a muted linter and report it calibrated | ADR-012 §6 | #28 | negatives suite runs against shipped defaults, never a profile |
+| 44 | An exported learned profile becomes de-facto calibration for someone else, defeating "no author's corpus judges another" | ADR-012 §6, ADR-007 §9 | #52, #55 | a profile is preferences, never thresholds |
+| 38 | NEXT.md carried a second copy of the phase points that nothing validated. Three of four were wrong at once, then the table silently reverted in a bad rebase — uncaught both times, because check 3b only reconciles tickets.md against itself | ADR-011, tickets §Build order | #01 | check §3c, `next-points`; verified by three probes |
 
 ## 2. The severity contract
 

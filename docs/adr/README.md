@@ -18,5 +18,6 @@ Format: Status / Context / Decision / Consequences.
 | [009](ADR-009-finding-carries-edits.md) | A Finding carries applicable edits and a safe diagnostic | 🟢 Accepted |
 | [010](ADR-010-typescript-and-the-toolchain-boundary.md) | TypeScript, and what the toolchain is exempt from | 🟢 Accepted |
 | [011](ADR-011-rules-are-enforced-not-reviewed.md) | Every rule that can be a failing check is one | 🟢 Accepted |
+| [012](ADR-012-observation-depth-and-local-learning.md) | Observation depth, and what the tool may learn | 🟢 Accepted · supersedes ADR-008 §4, §6 |
 
 Update this index whenever an ADR is added or its status changes.

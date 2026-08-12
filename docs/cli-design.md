@@ -177,7 +177,7 @@ overwriting an unsaved draft is not a thing a linter should be able to do quietl
       "end": 413,
       "advice": "escape as \\(",
       "fix": { "start": 412, "end": 413, "replacement": "\\(" },
-      "diagnostic": { "charCode": 40 }
+      "diagnostic": { "escape.charCode": 40 }
     },
     {
       "id": "style/flagged-word",
@@ -188,7 +188,7 @@ overwriting an unsaved draft is not a thing a linter should be able to do quietl
       "suggestions": [
         { "label": "use \"look at\"", "start": 88, "end": 93, "replacement": "look at" }
       ],
-      "diagnostic": { "termIndex": 47, "tier": 1, "count": 3, "per1k": 7 }
+      "diagnostic": { "flaggedWord.termIndex": 47, "flaggedWord.tier": 1, "flaggedWord.count": 3, "flaggedWord.per1k": 7 }
     }
   ],
   "summary": { "errors": 2, "warnings": 2, "info": 0 }

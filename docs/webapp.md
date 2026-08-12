@@ -107,6 +107,17 @@ Where a returning user's baseline lives, and why they are not asked to paste ten
 
 - Computed in the browser, kept in `localStorage`, **exportable to a file** so it survives a
   cleared browser, moves between machines, and feeds the CLI's `--baseline`
+- **Measured, not assumed:** a realistic ten-post profile is **7.4 KB**; the entire
+  256-article archive is **161 KB**, about 3% of a typical ~5 MB quota. Small because samples
+  carry no text
+- **`localStorage`, not IndexedDB** — capacity is irrelevant at that size, writes are
+  per-change not per-keystroke, and structured-clone buys nothing when the profile has to
+  serialise to JSON anyway for `--profile`, MCP and Cadence. **Neither store is durable**
+  (Safari evicts script-writable storage after ~a week idle), so export-to-file is the
+  durability story and this is a cache-format choice. Switch to IndexedDB at ~1 MB, multiple
+  profiles, or **anything text-bearing** — which depths 3–5 are (ADR-012 §8)
+- **Prompt to export after the first profile is built.** A user who never exports loses it
+  silently to browser eviction and blames the tool
 - **Samples are `{ date, register, weight, featureVector }`** — no id, no title, no text. A
   post cannot be reconstructed from one
 - Feature vectors rather than percentiles, so an eleventh post can be added and a new
@@ -117,36 +128,64 @@ not prose, not nothing. Said plainly wherever export is offered.
 
 ---
 
-## 6. Telemetry
+## 6. Observation and learning
 
-Full rationale in ADR-008 §4–§7. The operative rules:
+Full rationale in [ADR-012](./adr/ADR-012-observation-depth-and-local-learning.md), which
+supersedes ADR-008 §4 and §6. **Local always sits deeper than the server.**
 
-### Always sent, no consent beyond the counter opt-in
+| Depth | Payload | Local | Server |
+| --- | --- | --- | --- |
+| **0** Counts | `ruleId`, `fired`/`dismissed`/`accepted` | always | opt-in once |
+| **1** Structure | numeric `diagnostic` | always | same opt-in |
+| **2** Derived | numbers computed *from* text, never text | always | same opt-in |
+| **3** Fragments | matched span, the replacement typed | yes | separate opt-in, capped |
+| **4** Sentences | the triggering sentence, before/after | yes | separate opt-in, 3/session |
+| **5** Drafts | the whole post, across sessions | opt-in, clearable | **never** |
 
-| Sent | Never sent |
-| --- | --- |
-| Rule id | The matched word |
-| `fired` / `dismissed` / `accepted` | Character offsets |
-| Numeric `diagnostic` | Any hash of the text |
-| Post type, coarse length bucket, session id | A user id — there are no accounts |
+Depth is a user-facing dial, defaulting to **0–2 on, 3–5 off**. Depths 0–2 are content-free
+**by type** — `Diagnostic` admits only numbers under namespaced keys, both compiler-enforced.
 
-**Prefer an index into something already shipped.** `termIndex: 47` tells you `delve` fired
-because you shipped the list. Every curated-list rule works this way — flagged words,
-rhetorical-close patterns, self-label patterns, generic hashtags.
+**Two payload types, never one with a depth field:** `DiagnosticEvent` (numbers) and
+`SharedFragment` (text, capped, ledgered). A single type with an optional `sentence?: string`
+is a field somebody eventually populates by accident.
 
-### Sentence sharing — separate opt-in
+**Prefer an index into something already shipped.** `flaggedWord.termIndex: 47` tells you
+`delve` fired because you shipped the list. Every curated-list rule works this way.
 
-Counters tell you a rule is wrong. They cannot tell you whether the tool **helped**, and
-that is the question that matters.
+### The derived tier is where the signal is
+
+Edit distance between our suggestion and what they wrote; which rank they chose; time to
+action; whether they reverted it later; whether the session converged. All numbers, all new,
+none of them content.
+
+### Sentence sharing — separate opt-in, depth 3–4
 
 - Opt-in once, worded for the purpose. Never a vague analytics toggle
 - **At most three sentences per session**, so a post cannot be reassembled
 - Sentence granularity only. Spread first / middle / last, deterministically
-- **A visible ledger** — viewable, deletable. This is what makes the opt-in real
-- **On acceptance, send the sentence only when the edit diverges from the suggestion.** A
-  verbatim acceptance is a boolean and an index
-- **Escalation, not default:** a rule asks for its sentence only once its dismissal rate
-  crosses a threshold over a minimum sample
+- **On acceptance, send the sentence only when the edit diverges from the suggestion**
+- **Escalation, not default:** a rule asks only once its dismissal rate crosses a threshold
+- **A visible ledger**, viewable and clearable — and it records **what** was shared, not the
+  sentences. The trust property survives without the browser accumulating drafts
+
+### Local learning, and where it stops
+
+Depth 0–2 locally feeds adaptation: dismissal rates propose disabling a rule, chosen ranks
+reorder suggestions, rejected `patternIndex` values drop a pattern. Every linted post adds a
+sample, so the personal baseline sharpens with use — which makes ADR-007 §7's fairness appeal
+automatic instead of a chore.
+
+**The floor, because the tool must not lose its purpose to personalization:**
+
+- **`escape/*` is exempt from all of it.** A correctness guarantee, not a preference
+- **Learning affects `warn` and `info` only. Never `error`** — the publishing gate cannot be
+  learned away, and `lint()` stays reproducible across users of a version
+- **Adaptation is never silent.** It proposes, the user confirms
+- **A muted linter must not look like a clean post** — `4 rules muted for you` alongside the
+  verdict, so silence by choice is distinguishable from silence by cleanliness
+- **Learning is resettable and inspectable**
+- **A profile is preferences, never calibration.** Exporting one shares settings, not
+  thresholds anyone else is judged against
 
 ### Published aggregates
 

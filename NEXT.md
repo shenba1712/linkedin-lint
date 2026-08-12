@@ -2,7 +2,7 @@
 
 **Open this file, do the top unchecked thing, close it.** No deciding required.
 
-Phase 0a is the whole roadmap commitment: **18 points, 8 tickets, roughly 6–8 sessions.**
+Phase 0a is the whole roadmap commitment: **19 points, 8 tickets, roughly 6–8 sessions.**
 At that point the package is publishable and Cadence is unblocked.
 
 ---
@@ -37,7 +37,7 @@ Each row is one sitting. Do not skip ahead — every one depends on the one abov
 | ✓ | # | Pts | Do this | Done when |
 | --- | --- | --- | --- | --- |
 | [x] | **#01** | 2 | Scaffold: TS strict, Vitest, ESLint, ESM+CJS build | **Done 2026-08-11.** tsc, lint, test and check-docs all green. ESLint enforces the non-negotiables — verified by probe |
-| [ ] | **#02** | 1 | `src/types.ts` — `Finding`, `Severity`, `Stats`, `Baseline`, `LintOptions`, `Edit`, `Suggestion`, `Diagnostic`, `Profile` | All `readonly`, all documented. They are public API. **No `fixable`** — `fix?: Edit` replaces it |
+| [ ] | **#02a** | 2 | `src/types.ts` — the `Finding` contract: `Severity`, `Finding`, `Edit`, `Suggestion`, `Diagnostic` | All `readonly`, all documented. **No `fixable`.** `Diagnostic` is numbers-only, with a type-level test |
 | [ ] | **#03** | 3 | **`escapeCommentary`** — character loop, code-point aware, `\` branch first | Table cases E1–E9 pass. **The most important ticket in the repo** |
 | [ ] | **#04** | 2 | `unescapeCommentary` | E10–E12 pass. A lone trailing backslash does not crash |
 | [ ] | **#05** | 3 | **Property tests** | `escape(escape(s))===escape(s)` and `unescape(escape(s))===s` over 10,000+ generated inputs |
@@ -47,6 +47,32 @@ Each row is one sitting. Do not skip ahead — every one depends on the one abov
 
 **Exit gate:** `escapeCommentary` on the `pick()` post round-trips, and the property tests
 pass. Stop here and reassess — this alone is worth publishing.
+
+---
+
+## Phase 0b, in dependency order
+
+**Built fourth**, after 0f and 0g — see the build order below. Listed here because the
+three `#02` tickets are easy to forget once 0a closes.
+
+| ✓ | # | Pts | Do this | Done when |
+| --- | --- | --- | --- | --- |
+| [ ] | **#02b** | 2 | `Stats` and `Baseline` | Percentiles per statistic **and per register**. `lowConfidence`. Carries the measurement date |
+| [ ] | **#02c** | 2 | `LintOptions`, `PostType`, `StyleConfig` | **`PostType` is open** — seven named members plus any string, treated as permissive |
+| [ ] | **#02d** | 1 | `Profile` and `Sample` | A sample is `{date, register, weight, featureVector}`. **No id, no text**, asserted by a key-set test |
+| [ ] | **#09** | 2 | Sentence splitter | Splits on `.!?` plus whitespace, with an abbreviation list. Approximate on purpose — it feeds a variance measure |
+| [ ] | **#10** | 3 | `computeStats` | Every `Stats` field, checked against all 13 posts with hand-computed values |
+| [ ] | **#11** | 2 | `counts/*` rules | `over-limit` as **error**. `short` and `long` need a caller baseline |
+| [ ] | **#11a** | 2 | Hashtag reasons | Names the tags with a reason each, not "drop the last N". Worked example is `cancun.md` |
+| [ ] | **#12** | 3 | `foldPositions` | Needs B3. Line-aware. Constants in **one place**, marked observed not specified |
+| [ ] | **#13** | 2 | `fold/*` rules | `hook-too-long`, `hook-incomplete`, `nothing-above-fold` |
+| [ ] | **#14** | 3 | `computeBaseline` | **Fit over all 13 posts, not the 4-post sample.** `lowConfidence` under 5 per register |
+| [ ] | **#14a** | 2 | Recency weighting | 18-month half-life. `reference` weighted 4× and decay-exempt |
+| [ ] | **#14b** | 1 | Voice-marker parser | Reads `<!-- voice: ... -->`. Absent means `normal` |
+| [ ] | **#52** | 3 | **The Profile layer** | Pure, dates passed in. One JSON format for CLI, web, MCP and Cadence |
+
+**Exit gate:** the fold preview matches a real screenshot, and the constants are set to what
+was observed rather than assumed.
 
 ---
 
@@ -84,7 +110,7 @@ are content groups; this is the order.
 | --- | --- | --- | --- |
 | 2nd | **0f** | 9 | Release: verify the tarball, CI, docs, publish. **The build itself landed in #01.** **Unblocks Cadence.** #42 needs B1 and B2 |
 | 3rd | **0g** minus #46 | 11 | The landing page. The escaping demo needs nothing beyond 0a and 0f — this is what reaches someone who is not you |
-| 4th | **0b** | 23 | Counts and fold. Needs B3. Unblocks #46, then finish 0g. Carries the Profile (#52) that every later surface needs |
+| 4th | **0b** | 28 | Counts and fold. Needs B3. Unblocks #46, then finish 0g. Carries the Profile (#52) that every later surface needs |
 | 5th | **#50** | 3 | The profiling spike. **Go/no-go on the whole tells direction** — run it before building 0c and 0d, not after |
 | 6th | **0c** | 17 | Style and bold. **#20 is the trickiest ticket in the repo** |
 | 7th | **0d** minus #50 | 19 | Tells, only if #50 found anything. #28, the negatives suite, is the most valuable non-escaping test. Needs B5 |
@@ -92,12 +118,12 @@ are content groups; this is the order.
 | 9th | **0i** | 10 | `/app` — the editor and telemetry. Needs rules worth editing |
 | 10th | **0h** | 16 | The CLI. Last — nobody but you needs it, and the live page does the same job with no install |
 
-**0a + 0f + 0g is 38 points to a published package with a working public demo.** The old
+**0a + 0f + 0g is 39 points to a published package with a working public demo.** The old
 order needed 107.
 
 Three of these totals were also wrong before (0b said 15, 0d 17, 0f 24). They now match
 [docs/core/tickets.md](./docs/core/tickets.md), which `check-docs.mjs` verifies against the
-ticket rows. Total is **135**.
+ticket rows. Total is **141**.
 
 ---
 

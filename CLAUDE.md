@@ -216,6 +216,22 @@ register and does not ship at all.
 
 Say what changed, why, and what breaks without it. No drive-by changes.
 
+### Write Short
+
+Short sentences. Plain words. Cut anything that does not change a decision.
+
+- One idea per sentence.
+- Pick the shorter word. "use", not "utilise". "so", not "which means that".
+- Start with the answer. No preamble.
+- A table or a list beats a paragraph.
+- Three good lines beat ten thorough ones.
+
+**Code comments say *why*, in one or two lines.** Not a lecture. The reasoning belongs in
+the ADR; the comment points at it.
+
+Long is easier to write than short. Spend the effort compressing, not expanding — reading
+is the expensive part, and it is not the writer who pays.
+
 ## Rule ids
 
 `group/name`, lowercase, hyphenated:

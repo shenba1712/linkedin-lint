@@ -90,10 +90,11 @@ if (declared) {
 /* ── 3b. Phase headings and the summary table reconcile with the rows ────────
    Three different sets of numbers existed for the same tickets: headings summed to
    108, the summary table to 111, the rows to 114. Cadence had copied the 108. */
+const phaseRowSum = {};
 {
   const lines = tickets.split('\n');
   let cur = null;
-  const rowSum = {}, fromHeading = {};
+  const rowSum = phaseRowSum, fromHeading = {};
   for (const l of lines) {
     const h = l.match(/^## Phase (0[a-i]) — .*?\((\d+) pts\)/);
     if (h) { cur = h[1]; fromHeading[cur] = Number(h[2]); rowSum[cur] ??= 0; continue; }
@@ -113,6 +114,68 @@ if (declared) {
   }
   const t = Object.values(rowSum).reduce((a, b) => a + b, 0);
   if (t) note(`phase points reconcile: ${t}`);
+}
+
+/* ── 3c. NEXT.md's phase table agrees with the ticket rows ───────────────────
+   NEXT.md carries a SECOND copy of the phase points, and nothing read it. Three of
+   its four totals were wrong at once (0b said 15, 0d 17, 0f 24) and no check caught
+   it. The same table then silently reverted during a bad rebase — again uncaught,
+   because check 3b only reconciles tickets.md against itself.
+
+   NEXT.md is the file the maintainer opens to decide what to do next, so a wrong
+   number here is worse than a wrong number in the board it is copied from. */
+{
+  const nextPath = join(ROOT, 'NEXT.md');
+  const next = existsSync(nextPath) ? read(nextPath) : '';
+  let checked = 0;
+
+  /* Rows look like:  | 2nd | **0f** | 9 | Release: ... |   */
+  for (const m of next.matchAll(/^\|[^|]*\|\s*\*\*(0[a-i])\*\*[^|]*\|\s*(\d+)\s*\|/gm)) {
+    const [, phase, pts] = m;
+    const actual = phaseRowSum[phase];
+    if (actual === undefined) {
+      fail('next-points', `NEXT.md lists Phase ${phase}, which has no ticket rows in core/tickets.md`);
+      continue;
+    }
+    checked++;
+    /* A row may deliberately exclude a ticket ("0d minus #50", "0g minus #46"), so an
+       explicit "minus #NN" licenses the difference — and is itself checked, because a
+       stale exclusion is the same bug one level down. */
+    const minus = [...m[0].matchAll(/minus #(H?\d+[a-z]?)/g)].map((x) => x[1]);
+    let expected = actual;
+    for (const id of minus) {
+      const row = tickets.split('\n').find((l) => new RegExp(`^\\|\\s*\\*\\*#${id}\\*\\*`).test(l));
+      const p = row?.match(/^\|[^|]*\|[^|]*\|\s*(\d+)\s*\|/);
+      if (!p) { fail('next-points', `NEXT.md Phase ${phase} says "minus #${id}", which is not a ticket`); continue; }
+      expected -= Number(p[1]);
+    }
+    if (Number(pts) !== expected) {
+      const how = minus.length ? ` (${actual} minus #${minus.join(', #')})` : '';
+      fail('next-points', `NEXT.md says Phase ${phase} is ${pts} pts but core/tickets.md rows sum to ${expected}${how}`);
+    }
+  }
+
+  /* NEXT.md also copies individual ticket rows. Same rot, one level down: a ticket
+     repointed on the board leaves a stale twin here, and the phase totals still add up. */
+  let rows = 0;
+  for (const m of next.matchAll(/^\| \[.\] \| \*\*#(H?\d+[a-z]?)\*\*\s*\|\s*(\d+)\s*\|/gm)) {
+    const [, id, pts] = m;
+    rows++;
+    if (!seen.has(id)) { fail('next-tickets', `NEXT.md lists #${id}, which is not on the board`); continue; }
+    const row = tickets.split('\n').find((l) => new RegExp(`^\\|\\s*\\*\\*#${id}\\*\\*`).test(l));
+    const p = row?.match(/^\|[^|]*\|[^|]*\|\s*(\d+)\s*\|/);
+    if (p && Number(p[1]) !== Number(pts)) {
+      fail('next-tickets', `NEXT.md says #${id} is ${pts} pts but core/tickets.md says ${p[1]}`);
+    }
+  }
+  if (rows) note(`NEXT.md ticket rows reconcile: ${rows}`);
+
+  const declared = next.match(/Total is \*\*(\d+)\*\*/);
+  const total = Object.values(phaseRowSum).reduce((a, b) => a + b, 0);
+  if (declared && Number(declared[1]) !== total) {
+    fail('next-points', `NEXT.md says the total is ${declared[1]} but the ticket rows sum to ${total}`);
+  }
+  if (checked) note(`NEXT.md phase table reconciles: ${checked} phases`);
 }
 
 /* ── 4. Rule ids are consistent, and every rule is documented ───────────────
@@ -199,7 +262,7 @@ for (const [p, text] of corpus) {
    A PLANNED entry that now EXISTS is itself a failure, so the list cannot rot into a
    permanent bypass: landing the ticket forces removing the line. */
 const PLANNED = new Map([
-  ['src/types.ts', '#02'],
+  ['src/types.ts', '#02a'],
   ['src/escape.ts', '#03'],
 ]);
 for (const [p, ticket] of PLANNED) {

@@ -37,15 +37,15 @@ every fixture regardless of endorsement.
 
 ---
 
-## Phase 0a — Escaping (18 pts)
+## Phase 0a — Escaping (19 pts)
 
 The suite that justifies the whole package.
 
 | Id | Ticket | Pts | Dep | Acceptance |
 | --- | --- | --- | --- | --- |
 | **#01** | Scaffold | 2 | — | TypeScript strict, Vitest, ESLint, ESM+CJS build. `npm test` passes on an empty suite. **Blocks everything** |
-| **#02** | `types.ts` | 1 | #01 | `Finding`, `Severity`, `Stats`, `Baseline`, `LintOptions`, **plus `Edit`, `Suggestion`, `Diagnostic`, `Profile`** (ADR-009, ADR-008). All `readonly`. **No `fixable`** — `fix?: Edit` replaces it. `Diagnostic` admits numbers only. Every export documented: they are public API |
-| **#03** | `escapeCommentary` | 3 | #02 | Character loop, **code-point aware**. The `\` branch first. Table cases E1–E9 pass. **The most important ticket in the repo** |
+| **#02a** | The `Finding` contract | 2 | #01 | `Severity`, `Finding`, `Edit`, `Suggestion`, `Diagnostic`. All `readonly`, every export documented — they are public API. **No `fixable`**; `fix?: Edit` replaces it. **`Diagnostic` admits numbers only**, with a type-level test that a string value fails to compile |
+| **#03** | `escapeCommentary` | 3 | #02a | Character loop, **code-point aware**. The `\` branch first. Table cases E1–E9 pass. **The most important ticket in the repo** |
 | **#04** | `unescapeCommentary` | 2 | #03 | E10–E12 pass. Handles a lone trailing backslash without crashing |
 | **#05** | Property tests | 3 | #04 | `escape(escape(s))===escape(s)` and `unescape(escape(s))===s` over 10,000+ generated inputs including all reserved chars, emoji, newlines, astral-plane characters |
 | **#06** | Edge-case fixtures | 2 | #04 | E13–E18: empty string, 3,000 `(`, emoji plus reserved, both bold variants, mixed newlines, bracketed URL |
@@ -57,10 +57,13 @@ pass. At this point the package is already worth publishing.
 
 ---
 
-## Phase 0b — Counts and fold (23 pts)
+## Phase 0b — Counts and fold (28 pts)
 
 | Id | Ticket | Pts | Dep | Acceptance |
 | --- | --- | --- | --- | --- |
+| **#02b** | `Stats` and `Baseline` | 2 | #02a | Every field in [trd](../trd.md) §2. `Baseline` carries percentiles **per statistic and per register**, `lowConfidence`, and the **measurement date** the shipped generated-text distribution needs (ADR-007 §3) |
+| **#02c** | `LintOptions`, `PostType`, `StyleConfig` | 2 | #02a | The config surface in [api-specifications](../api-specifications.md) §2. **`PostType` is an open taxonomy** — seven named members plus any string, treated as permissive (ADR-008 §5) |
+| **#02d** | `Profile` and `Sample` | 1 | #02b | **A sample is `{date, register, weight, featureVector}`** — no id, no title, no text, asserted by a key-set test. Carries a schema version, because it is public API persisted on users' machines |
 | **#09** | Sentence splitter | 2 | #01 | Splits on `.!?` plus whitespace, with an abbreviation exception list. Documented as approximate — it feeds a variance measure, which is robust to miscounts |
 | **#10** | `computeStats` | 3 | #09 | Every field in `Stats`. Unit-tested against all 13 published posts with hand-computed expected values |
 | **#11** | `counts/*` rules | 2 | #10 | `over-limit` as **error**, `short` and `long` against the baseline, `too-many-hashtags` |
@@ -69,7 +72,7 @@ pass. At this point the package is already worth publishing.
 | **#14** | `computeBaseline` | 3 | #10 | Percentiles per statistic **and per register**. `lowConfidence` when any register has under 5 contributors. **Fit over all 13 LinkedIn posts, not the 4-post sample** — the first envelope was fitted to 4 and 8 of 13 fell outside it (ADR-003 §Recalibration) |
 | **#14a** | **Recency weighting + reference nomination** | 2 | #14 | `BaselineInput` with `publishedAt`, `register`, `weight`. 18-month half-life; `reference` weighted 4× and decay-exempt; `exclude` omitted. **The archive spans ~5 years — a flat mean matches no actual voice** |
 | **#14b** | Front-matter parser for `<!-- voice: ... -->` | 1 | #14a | Reads the marker out of a fixture file. Absent means `normal` |
-| **#52** | **The Profile layer** | 3 | #14a | `createProfile`, `addSample`, `baselineFrom`, `mergeProfiles`, `migrateProfile` — all **pure**, dates passed in. One JSON format shared by CLI, web, MCP and Cadence. **A sample is `{date, register, weight, featureVector}` — no id, no text**, asserted in a test. Schema is public API and versioned (ADR-008 §8) |
+| **#52** | **The Profile layer** | 3 | #02d, #14a | `createProfile`, `addSample`, `baselineFrom`, `mergeProfiles`, `migrateProfile` — all **pure**, dates passed in. One JSON format shared by CLI, web, MCP and Cadence. **A sample is `{date, register, weight, featureVector}` — no id, no text**, asserted in a test. Schema is public API and versioned (ADR-008 §8) |
 | **#11a** | Hashtag reasons | 2 | #11 | `counts/too-many-hashtags` **names the tags with a reason each** — token overlap, generic-tag list, term-absent (documented as the weakest signal). Ranked by reason count. Worked example is `cancun.md`'s ten tags |
 
 ---
@@ -81,11 +84,11 @@ Renamed from "Prohibitions and bold"
 
 | Id | Ticket | Pts | Dep | Acceptance |
 | --- | --- | --- | --- | --- |
-| **#15** | Flagged words and phrases | 2 | #02 | Configurable, word-boundary matched, case-insensitive. **Two tiers**: high-signal fires on presence, contextual counts toward density only. **`seamless` and `robust` are contextual-tier — a single one must not fire.** Tokenise-then-set-lookup, not N regexes. One `info` per occurrence with offsets, one `warn` when density crosses |
+| **#15** | Flagged words and phrases | 2 | #02c | Configurable, word-boundary matched, case-insensitive. **Two tiers**: high-signal fires on presence, contextual counts toward density only. **`seamless` and `robust` are contextual-tier — a single one must not fire.** Tokenise-then-set-lookup, not N regexes. One `info` per occurrence with offsets, one `warn` when density crosses |
 | **#16** | Em dash, emoji, hashtags, question-opener | 2 | #15 | All configurable, **all off or conservative by default**. Emoji by Unicode property, not a hard-coded list |
 | **#17** | Colon rules | 3 | #09 | `colon-overuse` and `colon-parallel`. **The numbered-list exception is required**, or it fires on good structured writing |
 | **#18** | `style/self-label-opener` | 1 | #15 | `As a/an <role>,`. **Decide first whether "opens with" means the first sentence or the first body paragraph** — `cancun.md` has the pattern in paragraph two |
-| **#19** | Bold span detection | 3 | #02 | Serif and sans-serif bold ranges, plus italic variants. Contiguous runs are one span. Correct offsets through astral-plane characters. **Explicit range tables, not NFKC** — `mixed-variants` needs the variant identity NFKC destroys |
+| **#19** | Bold span detection | 3 | #02a | Serif and sans-serif bold ranges, plus italic variants. Contiguous runs are one span. Correct offsets through astral-plane characters. **Explicit range tables, not NFKC** — `mixed-variants` needs the variant identity NFKC destroys |
 | **#20** | Code-identifier detection | 3 | #19 | **ASCII mapping is `normalize('NFKC')`** — verified to fold serif, sans and italic to the same string. Then checks for `()`/`<>`/`[]`/`_`/`.`, camelCase, PascalCase, keyword list. **Negative case: `𝐖𝐡𝐚𝐭 𝐢𝐭 𝐢𝐬:` must not fire** |
 | **#21** | `bold/*` rules | 2 | #20 | `code-identifier` as **error** with the whitespace-isolation advice **and a `suggestion` that replaces the span with its NFKC plain-ASCII form**. `over-budget`, `in-hook`, `mixed-variants`. `allowOnCodeIdentifiers` config honoured. **Blocked on the two manual checks in qa §8** — the screen-reader and LinkedIn-search claims are unverified |
 | **#54** | `style/hashtag-not-camelcase` | 1 | #16 | A multi-word all-lowercase hashtag runs together in a screen reader. An accessibility rule, sitting beside `bold/code-identifier` rather than inside a count |
@@ -103,10 +106,10 @@ identifiers is just a ban on bold, which is not the decision.
 | **#51** | Ship the measured baseline | 3 | #50 | The generated-text distribution shipped as data with a **measurement date**. `tells/flat-rhythm` and `tells/tricolon-density` read percentiles from it. No user corpus required |
 | **#22** | `tells/flat-rhythm` | 2 | #51 | Below p15 of the **measured generated-text distribution**. A caller baseline adds a second, personal comparison. Message states the observable, never a verdict |
 | **#23** | `tells/uniform-paragraphs` | 1 | #10 | `paragraphLenCv` below 0.25. Fixed constant, no baseline |
-| **#24** | `tells/no-stake` | 3 | #02 | First-person claim detection. **Only fires when `postType` requires one.** Negative case: a `mechanism` post with no personal claim must not fire |
+| **#24** | `tells/no-stake` | 3 | #02c | First-person claim detection. **Only fires when `postType` requires one.** Negative case: a `mechanism` post with no personal claim must not fire |
 | **#25** | `tells/no-specifics` | 2 | #09 | No number, named tool, API, or failure mode. **Gated by post type** — it is an absence feature (ADR-007 §4) |
 | **#26** | The three narrowed rules | 3 | #09, #51 | `cliche-opener` **first two sentences only**; `rhetorical-close` **unanswerable only**; `tricolon-density` **density only**, against the measured distribution. Negative cases from endorsed posts must not fire |
-| **#27** | `doNotNormalise` | 2 | #02 | Listed patterns never flagged, and surfaced as an `info` note. **Covers `style/*` only** — the `tells/*` gap is closed by #50's discriminant test, not by this |
+| **#27** | `doNotNormalise` | 2 | #02c | Listed patterns never flagged, and surfaced as an `info` note. **Covers `style/*` only** — the `tells/*` gap is closed by #50's discriminant test, not by this |
 | **#28** | **The negative-fixture suite** | 3 | #26, #14b, B5 | Three tiers per qa-test-plan §4. **NEG-ESCAPE across every fixture, all years** — must never fail. **NEG-CURRENT on explicitly endorsed files only** — the style gate. NEG-ARCHIVE reported, not asserted |
 
 **#50 comes first and can end the phase.** The features that read as generated overlap
@@ -197,8 +200,8 @@ editor. `/` ships far earlier, in 0g.
 | Id | Ticket | Pts | Dep | Acceptance |
 | --- | --- | --- | --- | --- |
 | **#55** | `/app` shell and route split | 2 | #43, #52 | Two routes. `/` carries the escaper only, `/app` the full linter — the bundle split is how the 60KB first-load budget is met. Profile import and export |
-| **#56** | The editor | 3 | #55, #32 | Inline highlighting. Click a `suggestion` to apply it, then **re-lint and re-render** — offsets move. Post-type selector: detected, shown, overridable, permissive on low confidence |
-| **#57** | Telemetry client and ledger | 3 | #56 | Opt-in counters: rule id, action, numeric `diagnostic`, session id. **Same-origin.** Separate opt-in for sentence sharing: max 3 per session, spread first/middle/last, **visible ledger, viewable and deletable**. Sentence sent on acceptance **only when the edit diverges** from the suggestion |
+| **#56** | The editor | 3 | #55, #32 | Inline highlighting. Click a `suggestion` to apply it, then **re-lint and re-render** — offsets move. Post-type selector: detected, shown, overridable, permissive on low confidence. **Local learning, cheap version**: count dismissals locally, propose disabling a rule once it crosses a threshold. Never silent, never `error`, never `escape/*`. **`N rules muted for you` beside the verdict**, so a learned-quiet tool is distinguishable from a clean post (ADR-012 §6) |
+| **#57** | Telemetry client, depth dial and ledger | 3 | #56 | **Depths 0–2** as `DiagnosticEvent` — numbers only, same-origin. **Separate type and opt-in** for `SharedFragment` (depths 3–4): max 3 sentences/session, spread first/middle/last, sent on acceptance **only when the edit diverges**. **Ledger records what was shared, not the sentences.** User-facing depth dial, default 0–2 on. **The derived tier** — edit distance, rank chosen, time to action, reverted, converged (ADR-012) |
 | **#58** | Endpoint, privacy notice, published aggregates | 2 | #57 | Same-origin endpoint so `default-src 'self'` holds. Short log retention, IPs truncated. **Privacy notice, separate from T&C.** Rule-fire and dismissal rates published on the site |
 
 **#57 is where the privacy claim is kept or lost.** The ledger is what makes the opt-in real
@@ -251,8 +254,8 @@ Listed by phase letter. For the order they are built in, see "Build order" above
 
 | Phase | Points |
 | --- | --- |
-| 0a Escaping | 18 |
-| 0b Counts and fold | 23 |
+| 0a Escaping | 19 |
+| 0b Counts and fold | 28 |
 | 0c Style and bold | 17 |
 | 0d Tells | 22 |
 | 0e Similarity | 7 |
@@ -260,7 +263,7 @@ Listed by phase letter. For the order they are built in, see "Build order" above
 | 0g Landing page | 13 |
 | 0h CLI | 16 |
 | 0i Editor and telemetry | 10 |
-| **Total** | **135** |
+| **Total** | **141** |
 
 **Phase 0a alone (18 points) is publishable.** A package that only escapes correctly is
 already more useful than what exists, and it is the piece Cadence needs before its own

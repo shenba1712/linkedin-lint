@@ -79,23 +79,47 @@ requiring knowledge of what the author meant needs a model, which is out of scop
 | `fold/*` | None — showing *where* it cuts beats any suggestion | |
 | `similarity/*` | None | |
 
-### 3. `diagnostic` is numbers only
+### 3. `diagnostic` is numbers only, under namespaced keys
 
 ```ts
-type Diagnostic = Readonly<Record<string, number | readonly number[]>>;
+type DiagnosticKey = `${string}.${string}`;   // group.field — the dot is required
+type Diagnostic = Readonly<Record<DiagnosticKey, number | readonly number[]>>;
 ```
+
+**Both halves are compiler-enforced.** Verified 2026-08-11:
+
+| Written | Result |
+| --- | --- |
+| `{ 'flaggedWord.termIndex': 47 }` | compiles |
+| `{ count: 2 }` — no namespace | `TS2353` |
+| `{ 'flaggedWord.term': 'delve' }` — content | `TS2322` |
+
+The dotted key came from a question about migrating to nested objects later, and the better
+reason emerged while answering it: **it makes flat sufficient, so the migration probably never
+happens.** Namespacing without recursion keeps the type non-recursive, keeps the substring test
+a one-level loop, and keeps "content cannot appear structurally" trivially true. A nested
+`Diagnostic` would need a recursive type and a tree-walking test to hold the same property.
+
+It also fixes a collision that flat keys guaranteed: 38 rules sharing one namespace, half of
+them wanting `count`, `index` and `per1k`. They collide the moment `#57` merges per-post
+diagnostics into one payload.
+
+**Known limit:** the template literal requires *a* dot, so `'..'` and `'a.b.c.d'` also compile.
+The compiler catches the case that matters — a missing namespace and a string value — and a
+runtime assertion over emitted diagnostics tightens the shape to `group.field`. Two layers, the
+same pattern as ESLint plus `"types": []` for `src/` purity.
 
 Structural facts about why a rule fired, shaped to be safe to transmit:
 
 ```jsonc
 { "id": "tells/flat-rhythm",
-  "diagnostic": { "sentenceLengths": [14,15,13,15,14], "stdDev": 0.8, "percentile": 12 } }
+  "diagnostic": { "rhythm.sentenceLengths": [14,15,13,15,14], "rhythm.stdDev": 0.8, "rhythm.percentile": 12 } }
 
 { "id": "style/flagged-word",
-  "diagnostic": { "termIndex": 47, "tier": 1, "count": 3, "per1k": 7 } }
+  "diagnostic": { "flaggedWord.termIndex": 47, "flaggedWord.tier": 1, "flaggedWord.count": 3, "flaggedWord.per1k": 7 } }
 
 { "id": "tells/rhetorical-close",
-  "diagnostic": { "patternIndex": 3, "sentenceOrdinal": 14 } }
+  "diagnostic": { "rhetoricalClose.patternIndex": 3, "rhetoricalClose.sentenceOrdinal": 14 } }
 ```
 
 **The type admits no strings, so content cannot appear in it structurally.** That decides

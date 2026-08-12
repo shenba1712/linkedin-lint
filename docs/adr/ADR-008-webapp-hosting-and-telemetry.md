@@ -63,6 +63,12 @@ when on, here is exactly what is sent, and you can see and delete every one."*
 
 ### 4. The payload is an allowlist, not a promise
 
+> **Superseded 2026-08-11 by [ADR-012](./ADR-012-observation-depth-and-local-learning.md).**
+> The flat allowlist below became a **depth ladder**, and the local store was freed from the
+> network's constraints. The rules here still hold for what the server receives at depths 0–2;
+> what changed is that there is more of it, and that local sits deeper. §6 is superseded the
+> same way.
+
 | Sent | Never sent |
 | --- | --- |
 | Rule id | **The matched word** — that is one word of their text |
