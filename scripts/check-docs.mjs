@@ -261,9 +261,7 @@ for (const [p, text] of corpus) {
 
    A PLANNED entry that now EXISTS is itself a failure, so the list cannot rot into a
    permanent bypass: landing the ticket forces removing the line. */
-const PLANNED = new Map([
-  ['src/escape.ts', '#03'],
-]);
+const PLANNED = new Map();
 for (const [p, ticket] of PLANNED) {
   if (existsSync(join(ROOT, p))) {
     fail('planned', `${p} now exists — ${ticket} has landed, so remove it from PLANNED in scripts/check-docs.mjs`);
