@@ -37,7 +37,7 @@ Each row is one sitting. Do not skip ahead — every one depends on the one abov
 | ✓ | # | Pts | Do this | Done when |
 | --- | --- | --- | --- | --- |
 | [x] | **#01** | 2 | Scaffold: TS strict, Vitest, ESLint, ESM+CJS build | **Done 2026-08-11.** tsc, lint, test and check-docs all green. ESLint enforces the non-negotiables — verified by probe |
-| [ ] | **#02a** | 2 | `src/types.ts` — the `Finding` contract: `Severity`, `Finding`, `Edit`, `Suggestion`, `Diagnostic` | All `readonly`, all documented. **No `fixable`.** `Diagnostic` is numbers-only, with a type-level test |
+| [x] | **#02a** | 2 | `src/types.ts` — the `Finding` contract: `Severity`, `Finding`, `Edit`, `Suggestion`, `Diagnostic` | All `readonly`, all documented. **No `fixable`.** `Diagnostic` is numbers-only, with a type-level test. **Done 2026-08-11.** Type-level tripwires verified by probe: weakening `Diagnostic` fails the build |
 | [ ] | **#03** | 3 | **`escapeCommentary`** — character loop, code-point aware, `\` branch first | Table cases E1–E9 pass. **The most important ticket in the repo** |
 | [ ] | **#04** | 2 | `unescapeCommentary` | E10–E12 pass. A lone trailing backslash does not crash |
 | [ ] | **#05** | 3 | **Property tests** | `escape(escape(s))===escape(s)` and `unescape(escape(s))===s` over 10,000+ generated inputs |

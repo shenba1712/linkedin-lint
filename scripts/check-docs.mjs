@@ -262,7 +262,6 @@ for (const [p, text] of corpus) {
    A PLANNED entry that now EXISTS is itself a failure, so the list cannot rot into a
    permanent bypass: landing the ticket forces removing the line. */
 const PLANNED = new Map([
-  ['src/types.ts', '#02a'],
   ['src/escape.ts', '#03'],
 ]);
 for (const [p, ticket] of PLANNED) {
