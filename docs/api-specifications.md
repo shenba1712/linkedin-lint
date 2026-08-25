@@ -96,12 +96,19 @@ The function that stops posts truncating. Escapes
 Two guaranteed properties, both property-tested:
 
 ```ts
-escapeCommentary(escapeCommentary(s)) === escapeCommentary(s)   // idempotent
-unescapeCommentary(escapeCommentary(s)) === s                   // lossless
+escapeCommentary(escapeCommentary(s)) === escapeCommentary(s)             // always
+unescapeCommentary(escapeCommentary(s)) === s                             // s not already escaped
+escapeCommentary(unescapeCommentary(escapeCommentary(s))) === escapeCommentary(s)   // always
 ```
 
 Idempotence matters because the escaper may run more than once in a pipeline.
-Losslessness is the proof nothing was dropped.
+
+**Losslessness is qualified.** `escapeCommentary` is idempotent, so `(` and `\(` both
+produce `\(` — it is not injective, and text that was *already* escaped cannot be
+recovered. For unescaped input, which is the normal case, it is lossless.
+
+The third property is the universal guarantee, and the practical one: **the body you
+send to LinkedIn does not change if the text goes through the pipeline twice.**
 
 ```ts
 escapeCommentary('Writing pick() is four lines.')

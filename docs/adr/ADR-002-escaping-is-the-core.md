@@ -56,12 +56,30 @@ for each code point c at index i:
   offsets, so a caller can highlight the danger instead of silently transforming.
 - **Parentheses get their own rule id**, `escape/unescaped-paren`, separate from other
   reserved characters, because their failure mode is the catastrophic one.
-- Two properties, property-tested over at least 10,000 generated inputs:
+- Three properties, property-tested over at least 10,000 generated inputs:
 
   ```
-  escape(escape(s)) === escape(s)
-  unescape(escape(s)) === s
+  escape(escape(s)) === escape(s)                     // always
+  unescape(escape(s)) === s                           // s not already escaped
+  escape(unescape(escape(s))) === escape(s)           // always
   ```
+
+  **Corrected 2026-08-11.** The second property was stated unqualified and is false.
+  `escape` is idempotent, so `escape('\(') === '\('` — which means `(` and `\(` produce
+  the *same* output. One output, two inputs: **`escape` is not injective and cannot be
+  inverted for both.** Verified by running it.
+
+  Idempotence and universal losslessness are incompatible, and this ADR chose idempotence
+  deliberately, because the escaper can run twice in a pipeline. So losslessness is
+  qualified to unescaped input — which is the realistic case, a draft rather than a
+  partly-escaped string.
+
+  The third property is the universal replacement, and it is the one a consumer actually
+  depends on: **what gets sent to LinkedIn does not change if the text passes through the
+  pipeline twice**, even when it was already escaped.
+
+  Caught before `#05` was written. The generated inputs there include reserved characters,
+  so they would have produced `\(` and failed the property as originally stated.
 
 - All `escape/*` findings are `error` severity, and **cannot be suppressed**.
   Suppressing them means publishing a broken post, and there is no legitimate reason to
@@ -74,8 +92,10 @@ for each code point c at index i:
   ([threat-model.md](../threat-model.md) T1).
 - **Idempotence is provable and proven**, which matters because the escaper can run more
   than once in a pipeline. A non-idempotent escaper is a silent corrupter.
-- **Losslessness is the real guarantee.** `unescape(escape(s)) === s` is what proves
-  nothing was dropped, and it is the property a consumer actually cares about.
+- **Losslessness is the real guarantee, and it is qualified.** `unescape(escape(s)) === s`
+  proves nothing was dropped — for input that was not already escaped. The universal form a
+  consumer depends on is `escape(unescape(escape(s))) === escape(s)`: the body sent to
+  LinkedIn does not drift across a round trip.
 - **Every published post becomes a fixture**, so the suite grows with real inputs rather
   than imagined ones. The README asks specifically for reports of posts that published
   truncated, because that is a missing test case.

@@ -48,15 +48,16 @@ asserting on stdout, stderr and the exit code.
 
 ### 2.2 Property tests
 
-The two guarantees, over generated inputs that include every reserved character at
+The three guarantees, over generated inputs that include every reserved character at
 random positions, plus emoji, newlines and astral-plane characters:
 
 ```
-escape(escape(s)) === escape(s)        // idempotent
-unescape(escape(s)) === s              // lossless
+escape(escape(s)) === escape(s)                 // idempotent, always
+unescape(escape(s)) === s                       // lossless, s NOT already escaped
+escape(unescape(escape(s))) === escape(s)       // stable, always
 ```
 
-At least 10,000 generated cases. These two properties are worth more than the whole
+At least 10,000 generated cases. These properties are worth more than the whole
 table above, because they cover the combinations nobody thought to write down.
 
 ### 2.3 Real-post fixtures
@@ -66,6 +67,9 @@ Every published post is a fixture. For each one:
 1. `escape` it
 2. `unescape` the result
 3. Assert it equals the original exactly
+
+Valid here because published posts are not already escaped — which is exactly the
+qualification §2.2 carries.
 
 **E-REAL-1** is the `pick()` post, because it is the reason the package exists. It
 contains `(`, `)`, `[`, `]`, `<`, `>`, `{`, `}` — eight reserved characters across six

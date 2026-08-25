@@ -11,7 +11,7 @@
  * network, no clock, no randomness. Where a rule needs outside data, the caller
  * passes it in. ESLint enforces all of that; see eslint.config.mjs.
  */
-export { escapeCommentary, isReserved } from './escape.js';
+export { escapeCommentary, isReserved, unescapeCommentary } from './escape.js';
 
 export type {
   Severity,
