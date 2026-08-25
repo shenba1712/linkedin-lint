@@ -56,15 +56,23 @@ needs a baseline — **the caller passes the data in**. The core never fetches i
 
 ### 2. Escaping is idempotent and round-trip safe
 
-Two properties, both property-tested over generated inputs:
+Three properties, all property-tested over generated inputs:
 
 ```
-escape(escape(s)) === escape(s)
-unescape(escape(s)) === s
+escape(escape(s)) === escape(s)                 // always
+unescape(escape(s)) === s                       // s not already escaped
+escape(unescape(escape(s))) === escape(s)       // always
 ```
 
-The first matters because the escaper may run more than once in a pipeline. The
-second is what proves nothing was lost.
+The first matters because the escaper may run more than once in a pipeline.
+
+**The second is qualified, and the qualification is not optional.** `escape` is
+idempotent, so `(` and `\(` both escape to `\(` — it is not injective and cannot be
+inverted for both. Idempotence and universal losslessness are incompatible;
+[ADR-002](./docs/adr/ADR-002-escaping-is-the-core.md) chose idempotence.
+
+The third is the universal one, and the one consumers depend on: **what gets sent to
+LinkedIn is stable across a round trip.**
 
 ### 3. Zero runtime dependencies
 

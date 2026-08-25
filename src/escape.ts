@@ -61,3 +61,37 @@ export function escapeCommentary(text: string): string {
 
   return out;
 }
+
+/**
+ * Reverse {@link escapeCommentary}: `\X` becomes `X` for reserved `X`.
+ *
+ * A backslash before a non-reserved character, or at the end of the string, is left
+ * alone — it was never an escape sequence.
+ *
+ * ```ts
+ * unescapeCommentary('pick\\(\\)')  // 'pick()'
+ * unescapeCommentary('a\\')         // 'a\\' — lone backslash, unchanged
+ * ```
+ *
+ * **This does not recover already-escaped input.** `escape` is idempotent, so `(` and
+ * `\(` both escape to `\(` and cannot be told apart afterwards. See ADR-002 §Properties.
+ */
+export function unescapeCommentary(text: string): string {
+  const chars = [...text];
+  let out = '';
+
+  for (let i = 0; i < chars.length; i += 1) {
+    const ch = chars[i] as string;
+    const next = chars[i + 1];
+
+    if (ch === '\\' && next !== undefined && RESERVED.has(next)) {
+      out += next;
+      i += 1;
+      continue;
+    }
+
+    out += ch;
+  }
+
+  return out;
+}

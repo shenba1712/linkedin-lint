@@ -37,7 +37,8 @@ public.
    before touching the implementation. The fixture is the deliverable
 2. Fix, and confirm the property tests still hold:
       escape(escape(s)) === escape(s)
-      unescape(escape(s)) === s
+      unescape(escape(s)) === s          # s not already escaped
+      escape(unescape(escape(s))) === escape(s)
 3. Publish a patch immediately if the fix restores previously-correct
    behaviour. Publish a MAJOR if the fix changes what correct output
    looks like

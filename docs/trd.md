@@ -74,7 +74,8 @@ export interface Edit {
 export interface Suggestion extends Edit {
   readonly label: string;
 }
-export type Diagnostic = Readonly<Record<string, number | readonly number[]>>;
+export type DiagnosticKey = `${string}.${string}`;   // group.field, dot required
+export type Diagnostic = Readonly<Record<DiagnosticKey, number | readonly number[]>>;
 
 export interface Finding {
   readonly id: string;          // "escape/unescaped-paren" — PUBLIC API
@@ -146,18 +147,23 @@ The `\` handling in the first branch is what makes the function **idempotent**. 
 matters: `\` is itself reserved, so a naive "escape every reserved character"
 implementation double-escapes an already-escaped string and corrupts it.
 
-### 3.3 The two properties
+### 3.3 The three properties
 
-Both property-tested over generated inputs containing every reserved character in
+All property-tested over generated inputs containing every reserved character in
 random positions:
 
 ```
-escape(escape(s)) === escape(s)      // idempotent
-unescape(escape(s)) === s            // lossless
+escape(escape(s)) === escape(s)                 // idempotent, always
+unescape(escape(s)) === s                       // lossless, s not already escaped
+escape(unescape(escape(s))) === escape(s)       // stable, always
 ```
 
-The first matters because the escaper can run more than once in a pipeline. The
-second is the proof that nothing was lost.
+The first matters because the escaper can run more than once in a pipeline.
+
+**The second is qualified**: `escape` is idempotent, so `(` and `\(` produce the same
+output and it cannot be inverted for both. Corrected 2026-08-11 — see
+[ADR-002](./adr/ADR-002-escaping-is-the-core.md). The third is the universal
+replacement: the escaped form does not drift across a round trip.
 
 ### 3.4 What is not touched
 

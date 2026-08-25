@@ -39,7 +39,7 @@ Each row is one sitting. Do not skip ahead — every one depends on the one abov
 | [x] | **#01** | 2 | Scaffold: TS strict, Vitest, ESLint, ESM+CJS build | **Done 2026-08-11.** tsc, lint, test and check-docs all green. ESLint enforces the non-negotiables — verified by probe |
 | [x] | **#02a** | 2 | `src/types.ts` — the `Finding` contract: `Severity`, `Finding`, `Edit`, `Suggestion`, `Diagnostic` | All `readonly`, all documented. **No `fixable`.** `Diagnostic` is numbers-only, with a type-level test. **Done 2026-08-11.** Type-level tripwires verified by probe: weakening `Diagnostic` fails the build |
 | [x] | **#03** | 3 | **`escapeCommentary`** — character loop, code-point aware, `\` branch first | Table cases E1–E9 pass. **The most important ticket in the repo**. **Done 2026-08-11.** E1–E9 plus E10–E18 escape-side, 24 tests. Branch order proven load-bearing: removing the `\` branch fails 3 idempotence tests |
-| [ ] | **#04** | 2 | `unescapeCommentary` | E10–E12 pass. A lone trailing backslash does not crash |
+| [x] | **#04** | 2 | `unescapeCommentary` | E10–E12 pass. A lone trailing backslash does not crash. **Done 2026-08-11.** Also found the round-trip property was stated wrong in 9 docs — `escape` is not injective. Corrected before #05 could build a test that fails |
 | [ ] | **#05** | 3 | **Property tests** | `escape(escape(s))===escape(s)` and `unescape(escape(s))===s` over 10,000+ generated inputs |
 | [ ] | **#06** | 2 | Edge-case fixtures | E13–E18: empty, 3,000 `(`, emoji, both bold variants, mixed newlines, bracketed URL |
 | [ ] | **#07** | 2 | Real-post round-trip fixtures | Every published post round-trips exactly. **E-REAL-1 is the `pick()` post** |
