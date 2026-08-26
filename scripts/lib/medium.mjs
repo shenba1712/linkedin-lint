@@ -1,14 +1,8 @@
 /**
- * Shared Medium-export logic. Imported by BOTH inspect-medium-export.mjs and
- * import-medium-export.mjs.
+ * Shared by inspect-medium-export.mjs and import-medium-export.mjs.
  *
- * It lives in one place because the two scripts disagreed once: the inspector
- * measured "title duplicates body" against raw stripped HTML while the importer
- * measured it against cleaned text. Different strings, different answers, so the
- * inspector's count of 29 would not have reproduced in the importer. One
- * function, one answer.
- *
- * Zero dependencies.
+ * One place because the two once measured the same thing against different strings
+ * and got different answers. One function, one answer.
  */
 
 export function decodeEntities(s) {
@@ -108,20 +102,10 @@ export function titleOf(html, filename = '') {
 const norm = (s) => s.toLowerCase().replace(/\W+/g, ' ').trim();
 
 /**
- * A REPORTED SIGNAL, not a discriminator. See the note in classify().
- *
- * An article has a title distinct from its body. A response has no title, so
- * Medium synthesises one from the opening words — which makes the title reappear
- * as the start of the body.
- *
- * So: remove the <h1> element, convert what remains, and ask whether the body
- * still opens with the title's words. Article → no. Response → yes.
- *
- * Follows from how the export is generated, not from a class name. Length is
- * deliberately not consulted: the corpus runs 137–3,166 words and the short end
- * contains real articles.
- *
- * Returns true (response) / false (article) / null (cannot tell).
+ * REPORTED ONLY, not a discriminator — see classify(). A response has no title, so
+ * Medium builds one from the opening words and it reappears in the body.
+ * Length is deliberately NOT consulted: 137–3,166 words, real articles at the short end.
+ * true = response, false = article, null = cannot tell.
  */
 export function titleDuplicatesBody(html) {
   const title = norm(titleOf(html)).slice(0, 40);
@@ -146,31 +130,10 @@ export function imageCount(html) {
 }
 
 /**
- * classify(html, filename, opts)
- *
- * DISCRIMINATOR: at least one image → article.
- *
- * Set 2026-08-11 on the author's own statement that every article of hers carries
- * at least one image. That is domain knowledge about the corpus, which is worth
- * more than anything inferable from markup — and markup is where the previous four
- * attempts went wrong:
- *
- *   1. word count + paragraph count scored as independent signals. Both proxy
- *      length, so short articles were double-penalised and excluded.
- *   2. inResponseTo / "in response to" markers. CONSTANT in the real export —
- *      Medium emits neither. Everything passed.
- *   3. inspector and importer measured "title duplicates body" against different
- *      strings, so their counts could not agree.
- *   4. h1-vs-body split 479/29, which was read as confirmation because 29 matched
- *      a number invented in conversation. The archive holds 180+ articles, so it
- *      was misclassifying ~150 of them.
- *
- * h1-vs-body is retained as a REPORTED field only. It is not consulted here.
- *
- * Known limits, stated rather than discovered later:
- *   · a response quoting an image is misfiled as an article
- *   · an article published without an image is misfiled as a response
- * Both show up in the inspector's title lists, which is why those exist.
+ * DISCRIMINATOR: at least one image -> article. The author's own domain knowledge,
+ * which beat four attempts to infer it from markup — all four are written up in
+ * CLAUDE.md, Lessons Learned, under the distribution note.
+ * Misfiles a response that quotes an image, and an article published without one.
  */
 export function classify(html, filename, opts = {}) {
   const minImages = opts.minImages ?? 1;

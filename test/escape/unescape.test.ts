@@ -1,8 +1,8 @@
 /**
- * E10–E12 round-trip side, and the three properties as they actually hold.
+ * E10–E12 round-trip side, and the properties as they actually hold.
  *
- * The middle property is qualified on purpose: `escape` is idempotent, so it is not
- * injective, so it cannot be inverted for input that was already escaped. ADR-002.
+ * Only idempotence is universal. Losslessness needs input that is not already
+ * escaped, because `escape` is idempotent and so not invertible. ADR-002.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -79,12 +79,18 @@ describe('the properties, as they actually hold', () => {
     expect(unescapeCommentary(escapeCommentary('\\('))).not.toBe('\\(');
   });
 
-  it('the escaped form is stable under a round trip — always', () => {
-    /* The property a consumer actually depends on: what gets sent to LinkedIn does not
-       change if the text passes through the pipeline twice, even when already escaped. */
+  it('the escaped form survives a round trip for these inputs', () => {
+    // NOT a universal property. It was claimed as one and #05 disproved it with
+    // `\\<` — see property.test.ts. These particular inputs happen to survive.
     for (const s of [...RAW, '\\(', 'a\\_b', '\\#tag', '\\', 'a\\']) {
       const escaped = escapeCommentary(s);
       expect(escapeCommentary(unescapeCommentary(escaped))).toBe(escaped);
     }
+  });
+
+  it('but not for a backslash followed by a reserved character', () => {
+    // The counterexample this file's old comment claimed could not exist.
+    const escaped = escapeCommentary('\\\\<');
+    expect(escapeCommentary(unescapeCommentary(escaped))).not.toBe(escaped);
   });
 });

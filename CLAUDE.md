@@ -94,7 +94,7 @@ on 19 points of rules, and measurement quality beats toolchain uniformity
 
 Anything in this file that can be a failing check **is** one — ESLint, `check-docs.mjs`, or a
 test. Where a check and this document disagree, the check wins and this document is stale.
-[ADR-011](./docs/adr/ADR-011-rules-are-enforced-not-reviewed.md) lists all 18 and says which
+[ADR-011](./docs/adr/ADR-011-rules-are-enforced-not-reviewed.md) lists all 19 and says which
 rules are deliberately left to judgement.
 
 Adding a rule now costs writing its check. That is a feature: it filters out rules not worth
@@ -177,7 +177,8 @@ style rule means building the overlap-resolution loop that
 1. `npx tsc --noEmit`
 2. `npm run lint`
 3. `npm test`
-4. If you touched escaping: `npm run test:escape` and confirm the property tests ran
+4. `npm run check:docs` and `npm run check:comments`
+5. If you touched escaping: `npm run test:escape` and confirm the property tests ran
 
 Never say "done" with a failing test or a type error.
 
@@ -237,6 +238,11 @@ Short sentences. Plain words. Cut anything that does not change a decision.
 
 **Code comments say *why*, in one or two lines.** Not a lecture. The reasoning belongs in
 the ADR; the comment points at it.
+
+**Enforced, not remembered.** `node scripts/check-comments.mjs` fails on any comment block
+over **6 lines**, including the delimiters. It exists because this section was written and
+then broken in the next two tickets. If a comment does not fit in six lines, it belongs in
+an ADR and the comment should link to it.
 
 Long is easier to write than short. Spend the effort compressing, not expanding — reading
 is the expensive part, and it is not the writer who pays.
@@ -352,6 +358,19 @@ consumers must opt in deliberately.
   | `genreHint` regex | One bucket | `explainer` took 131 of 256 |
   | Register keyword list | Undercounted technical | Missed `TTL`, `CDN`, `tombstone` — 4/32 not 13/33 |
   | 12-genre codebook | Controlled nothing | 4 of 12 genres used; `register` `essay` 15 of 16 |
+
+  Three more from the same importer, kept here because the comment that held them was
+  cut and this is where the reasoning belongs:
+
+  | Mistake | Why it was wrong |
+  | --- | --- |
+  | Word count and paragraph count scored as independent signals | Both proxy length, so short articles were double-penalised and excluded |
+  | Inspector and importer each measured "title duplicates body" | Against different strings, so their counts could never agree. One function, one answer |
+  | An h1-vs-body split of 479/29 was read as confirmation | **Because 29 matched a number invented earlier in conversation.** The archive holds 180+ articles, so it was misfiling ~150 |
+
+  The last one is the sharpest: **a result that matches what you expected is not thereby
+  verified.** It is the easiest kind of wrong answer to accept, because checking it feels
+  redundant.
 
   **A variable whose modal value takes more than about two-thirds cannot separate anything**,
   and one that is constant silently passes everything — which looks like success. One

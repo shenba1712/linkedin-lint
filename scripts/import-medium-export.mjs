@@ -1,16 +1,9 @@
 #!/usr/bin/env node
 /**
- * Turn a Medium export into clean fixture files.
+ * Turn a Medium export into clean fixture files. Classification is in lib/medium.mjs.
+ * Export it from Medium → Settings → Account.
  *
  *   node scripts/import-medium-export.mjs <export-dir> [--dry-run] [--expect=29]
- *
- * Get the export: Medium → Settings → Account → "Download your information".
- * Unzip the emailed archive and point this at the folder.
- *
- * Classification logic lives in scripts/lib/medium.mjs, shared with
- * inspect-medium-export.mjs so both scripts always agree on the count.
- *
- * Zero dependencies.
  */
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';

@@ -1,12 +1,7 @@
 /**
- * The three escaping properties, over generated input. qa-test-plan §2.2.
+ * The escaping properties over generated input. qa-test-plan §2.2.
  *
- * Worth more than the whole table above them, because they cover the combinations
- * nobody thought to write down.
- *
- * Deterministic on purpose: a fixed seed means CI runs the same 10,000 cases every
- * time and a failure reproduces exactly. `Math.random()` is banned repo-wide, which
- * forces that discipline rather than leaving it to choice.
+ * Fixed seed, so a failure reproduces. `Math.random()` is banned repo-wide anyway.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -15,7 +10,7 @@ import { escapeCommentary, isReserved, unescapeCommentary } from '../../src/esca
 const CASES = 10_000;
 const SEED = 0x5eed;
 
-/** mulberry32 — small, fast, deterministic. Not cryptographic, does not need to be. */
+/** mulberry32. Deterministic; does not need to be cryptographic. */
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
@@ -49,11 +44,8 @@ function genAny(rng: () => number): string {
 }
 
 /**
- * Input that is NOT already escaped — no backslash immediately before a reserved
- * character. That is the domain on which losslessness holds; see ADR-002.
- *
- * Backslashes still appear (a Windows path is ordinary prose), just never in a
- * position that reads as an escape sequence.
+ * Input with no `\` before a reserved character — the domain where losslessness holds
+ * (ADR-002). Backslashes still appear, just never as an escape sequence.
  */
 function genRaw(rng: () => number): string {
   const atoms = [...RESERVED, ...PLAIN, ...PLAIN, ...EMOJI, ...ASTRAL, ...NEWLINE];
@@ -78,10 +70,7 @@ function hasEscapeSequence(s: string): boolean {
   return false;
 }
 
-/**
- * Cut the failing input down to something readable before reporting it. A 40-character
- * random string tells you nothing; three characters tells you everything.
- */
+/** Cut the failure down to something readable. 40 random chars tell you nothing. */
 function shrink(input: string, fails: (s: string) => boolean): string {
   let best = input;
   let changed = true;
@@ -132,10 +121,8 @@ describe(`the three properties, over ${CASES.toLocaleString('en')} generated inp
   });
 
   it('and is NOT stable once the input contains an escape sequence', () => {
-    /* Found by this suite on 2026-08-26, after being asserted as universal in 9 docs.
-       `\\<` escapes to `\\\<`; unescape reads `\\`->`\` then `\<`->`<`, giving `\<`;
-       re-escaping is idempotent so it stays `\<`. The loss happens at UNESCAPE, not
-       escape. Pinned here so the false claim cannot come back. */
+    // `\\<` -> esc `\\\<` -> unesc `\<` -> esc `\<`. Loss is at unescape, not escape.
+    // Was claimed universal in 9 docs. Pinned so it cannot come back.
     for (const s of ['\\\\<', '\\\\(', '\\\\#']) {
       const e = escapeCommentary(s);
       expect(escapeCommentary(unescapeCommentary(e))).not.toBe(e);
@@ -155,11 +142,7 @@ describe(`the three properties, over ${CASES.toLocaleString('en')} generated inp
   });
 });
 
-/**
- * The generators are only as good as what they actually produce. A corpus that never
- * emits a backslash would pass every property vacuously — the repo has been bitten four
- * times by a variable that looked like a discriminator and was near-constant.
- */
+/** A corpus that never emits a backslash would pass every property vacuously. */
 describe('the corpus contains what the properties need', () => {
   const rng = makeRng(SEED);
   const corpus = Array.from({ length: CASES }, () => genAny(rng));
@@ -167,7 +150,7 @@ describe('the corpus contains what the properties need', () => {
     corpus.filter(p).length / corpus.length;
 
   it('mostly contains reserved characters', () => {
-    /* Measured 0.893 at this seed. The floor is what matters, not the exact figure. */
+    // Measured 0.893 at this seed; the floor is what matters.
     expect(share((s) => [...s].some(isReserved))).toBeGreaterThan(0.85);
   });
 

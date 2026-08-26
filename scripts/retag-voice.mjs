@@ -1,15 +1,9 @@
 #!/usr/bin/env node
 /**
- * Restore <!-- voice: reference --> tags from scripts/voice-reference.txt.
+ * Restore <!-- voice: reference --> tags from voice-reference.txt. Idempotent.
+ * A re-import once wiped 33 nominations, and they cannot be regenerated.
  *
  *   node scripts/retag-voice.mjs [--dry-run]
- *
- * Exists because re-importing the corpus rewrites every file and wiped 33
- * hand-made nominations. The importer now carries existing tags forward, so this
- * is the recovery path rather than the routine one — but nominations are the only
- * artifact here that cannot be regenerated, so having both is cheap insurance.
- *
- * Idempotent. Zero dependencies.
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';

@@ -1,15 +1,9 @@
 #!/usr/bin/env node
 /**
- * Print the structural fingerprint of every file in a Medium export.
+ * Structural fingerprint of every file in a Medium export. Read-only.
+ * Exists because the classifier was built on guessed markup twice. Measure first.
  *
  *   node scripts/inspect-medium-export.mjs <path-to-unzipped-export>
- *
- * This exists because the import classifier has been wrong twice — once too
- * strict, once too permissive — both times because it was built on guessed
- * markup. This reads what is actually there so the filter can be built on
- * evidence instead.
- *
- * Reads only. Writes nothing. Zero dependencies.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve, basename } from 'node:path';

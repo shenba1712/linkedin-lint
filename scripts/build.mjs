@@ -1,16 +1,8 @@
 #!/usr/bin/env node
 /**
- * Dual ESM + CJS build, with tsc and nothing else.
- *
- *   dist/         ESM  + .d.ts   (package.json says "type": "module")
- *   dist/cjs/     CJS  + .d.ts   (its own package.json says "type": "commonjs")
- *
- * Why the subdirectory rather than dist/index.mjs and dist/index.cjs: hitting those
- * literal filenames means renaming every emitted file AND rewriting the relative
- * import specifiers inside them, because `./escape.js` would have to become
- * `./escape.mjs`. That is hand-rolled source rewriting in the build of a package
- * whose entire value is not corrupting text. The marker file below costs two lines
- * and needs no rewriting at all. See devops-cicd.md §5.
+ * Dual build with tsc alone: ESM in dist/, CJS in dist/cjs/ with a "type": "commonjs"
+ * marker. Not dist/index.mjs — those filenames would mean rewriting import specifiers
+ * inside emitted files. devops-cicd.md §5.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';

@@ -1,9 +1,6 @@
 /**
- * The `Finding` contract, asserted at compile time.
- *
- * The `@ts-expect-error` lines are the real tests: each fails the build if the code
- * below it stops erroring. Two guarantees depend on that — `Diagnostic` admits no
- * strings (ADR-008 §4), and `Finding` has no `fixable` (ADR-009 §1).
+ * The `Finding` contract at compile time. Each `@ts-expect-error` fails the build if
+ * the line below it stops erroring — ADR-008 §4 and ADR-009 §1 depend on that.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -75,9 +72,7 @@ describe('Suggestion', () => {
 
 describe('the types module', () => {
   it('contributes no runtime code', async () => {
-    /* Every export is a type, so this compiles to an empty module. Asserted because
-       the browser bundle has a 60KB budget and `/` ships only the escaper — a stray
-       runtime constant here would be paid for on every page load. */
+    // All types, so this compiles to nothing. `/` has a 60KB budget.
     const mod: Record<string, unknown> = await import('../src/types.js');
     expect(Object.keys(mod)).toEqual([]);
   });

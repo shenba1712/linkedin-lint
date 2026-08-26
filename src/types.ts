@@ -11,10 +11,12 @@
  */
 export type Severity = 'error' | 'warn' | 'info';
 
-/** A mechanical replacement. Offsets are over the ORIGINAL text, so ranges match what was typed. */
+/**
+ * A mechanical replacement. Half-open range `[start, end)` over the ORIGINAL text,
+ * so a highlighted range matches what the user typed.
+ */
 export interface Edit {
   readonly start: number;
-  /** Exclusive. */
   readonly end: number;
   /** Empty means delete. */
   readonly replacement: string;
@@ -38,11 +40,9 @@ export interface Suggestion extends Edit {
 export type DiagnosticKey = `${string}.${string}`;
 
 /**
- * Why a rule fired — numbers only, by type, so content cannot appear structurally.
- * This is the one field designed to leave the machine (ADR-008 §4, ADR-012 §1).
- *
- * Send an index into a shipped list, never the matched text: `flaggedWord.termIndex: 47`
- * identifies `delve` exactly, because the caller has the same list.
+ * Why a rule fired. Numbers only by type, so content cannot get in. The one field
+ * meant to leave the machine (ADR-008 §4). Send `flaggedWord.termIndex: 47`, never
+ * the matched word — the caller has the same list.
  */
 export type Diagnostic = Readonly<Record<DiagnosticKey, number | readonly number[]>>;
 
@@ -52,16 +52,12 @@ export interface Finding {
   readonly id: string;
   readonly severity: Severity;
   /**
-   * One line, plain, no emoji, no trailing period.
-   *
-   * States what was measured, never who wrote it: "sentence lengths are 14, 15, 13"
-   * not "this reads as AI". The package cannot know, and the writers a heuristic
-   * misjudges are mostly people writing formal or second-language English.
+   * One line, plain, no emoji, no trailing period. States what was measured, never
+   * who wrote it — "sentence lengths are 14, 15, 13", not "this reads as AI". CLAUDE.md §8.
    */
   readonly message: string;
-  /** Over the ORIGINAL text. Absent for whole-post findings. */
+  /** Half-open `[start, end)` over the ORIGINAL text. Absent for whole-post findings. */
   readonly start?: number;
-  /** Exclusive. */
   readonly end?: number;
   /** Prose. Not machine-applicable — see {@link suggestions}. */
   readonly advice?: string;

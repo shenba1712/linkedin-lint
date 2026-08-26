@@ -54,6 +54,7 @@ exists only as prose is a rule that will erode.**
 | A profile sample carries no id and no text | Key-set assertion | ADR-008 |
 | Every regex survives pathological input | ReDoS timing tests, `#33` | pre-existing |
 | Rules do not fire on endorsed writing | The negatives suite, `#28` | pre-existing |
+| **Comments stay short** | `check-comments.mjs` — no block over 6 lines | 2026-08-26 |
 
 ### The two properties a good check has
 

@@ -1,11 +1,7 @@
 /**
- * The worst-case fixture, and the edge cases the inline table does not reach.
- * qa-test-plan §2.4: "If that round-trips, the escaper works."
+ * The worst-case fixture, plus edge cases the inline table misses. qa-test-plan §2.4.
  *
- * File-based on purpose. A string literal in a test is retyped and can drift; a fixture
- * is the bytes, and `worst-case.txt` is the one file built to contain every hazard at
- * once — all 15 reserved characters, both bold variants, emoji, mixed newlines, a
- * bracketed URL and an already-escaped pair.
+ * File-based because a string literal in a test drifts; the fixture is the bytes.
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -19,8 +15,7 @@ const worstCase = readFileSync(
 
 describe('worst-case.txt — E13–E18 in one file', () => {
   it('contains every hazard it claims to', () => {
-    /* Asserted, not assumed. §2.4 said "mixed newlines" and the file had none until
-       2026-08-26 — the spec was right and the fixture had quietly drifted from it. */
+    // §2.4 said "mixed newlines" and the file had none until 2026-08-26.
     const cp = [...worstCase];
     expect(new Set(cp.filter(isReserved)).size).toBe(15);
     expect(cp.some((c) => (c.codePointAt(0) ?? 0) >= 0x1d400 && (c.codePointAt(0) ?? 0) <= 0x1d433)).toBe(true);
@@ -55,9 +50,8 @@ describe('worst-case.txt — E13–E18 in one file', () => {
   });
 
   it('does NOT round-trip — it contains an already-escaped pair', () => {
-    /* Deliberate. The file includes `\(` on purpose, which is exactly the input class
-       `unescape` cannot recover (ADR-002). Asserting the limit here stops someone
-       "fixing" the fixture to make a round-trip test pass. */
+    // The file has `\(` on purpose — the class `unescape` cannot recover (ADR-002).
+    // Asserted so nobody "fixes" the fixture to make a round-trip test pass.
     expect(unescapeCommentary(escapeCommentary(worstCase))).not.toBe(worstCase);
   });
 
@@ -69,9 +63,7 @@ describe('worst-case.txt — E13–E18 in one file', () => {
 
 describe('edge cases the table does not reach', () => {
   it('survives a lone unpaired surrogate', () => {
-    /* The nastiest form of the UTF-16 tax ADR-010 accepts. `\uD800` alone is not a
-       valid code point; for-of yields it as one element and the loop must not corrupt
-       or drop it. */
+    // `\uD800` alone is not a valid code point. for-of yields it as one element.
     const lone = 'a\uD800(b';
     expect(() => escapeCommentary(lone)).not.toThrow();
     expect(escapeCommentary(lone)).toBe('a\uD800\\(b');
@@ -102,12 +94,8 @@ describe('edge cases the table does not reach', () => {
   });
 
   it('a run of backslashes is read as already-escaped pairs, and left alone', () => {
-    /* `\` is both the escape character and reserved, so it is the one case where a
-       repeated character does not double. The first branch sees `\` followed by `\`
-       — a reserved character — and copies the pair through untouched.
-
-       Measured: an even run is unchanged; an odd run gains one, because the last
-       backslash has no partner and gets escaped on its own. */
+    // `\` is both the escape char and reserved, so a run reads as escaped pairs.
+    // Even runs are unchanged; odd runs gain one for the unpaired last backslash.
     expect(escapeCommentary('\\'.repeat(3000))).toBe('\\'.repeat(3000));
     expect(escapeCommentary('\\\\')).toBe('\\\\');
     expect(escapeCommentary('\\\\\\')).toBe('\\\\\\\\');

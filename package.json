@@ -47,7 +47,8 @@
     "test": "vitest run",
     "test:full": "vitest run --config vitest.full.config.ts",
     "test:escape": "vitest run test/escape",
-    "check:docs": "node scripts/check-docs.mjs"
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:comments": "node scripts/check-comments.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

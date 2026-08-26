@@ -35,7 +35,7 @@ test that proves it. Add a row when a risk is accepted; never delete one.
 | 33 | The Profile grows into post history and becomes a second Cadence | ADR-008 §8, webapp §4 | #52, #55 | sample shape `{date, register, weight, featureVector}` asserted in a test — no id, no text |
 | 34 | The language choice had no record, though it forecloses Rust and is what makes the 60KB browser budget meetable | ADR-010 | #01, #44 | bundle size checked in #44 |
 | 35 | UTF-16 makes JS the worst mainstream choice for this package's specific hazard — offsets through astral-plane characters | ADR-010, trd §3.4 | #03, #05, #19 | property tests generate astral-plane input |
-| 36 | A rule that lives only in prose erodes silently — nothing breaks, it just stops being true | ADR-011 | #01 | 18 rules now enforced by ESLint, check-docs or a test |
+| 36 | A rule that lives only in prose erodes silently — nothing breaks, it just stops being true | ADR-011 | #01 | 19 rules now enforced by ESLint, check-docs, check-comments or a test |
 | 37 | A check whose scope is hardcoded data stops checking silently and still reads as green — `check-docs.mjs` nearly did on the group rename | ADR-011 §Consequences | #01 | rename check added; guards verified by probe |
 | 23 | Surface "AI tells" may separate LinkedIn's native register rather than authorship — generated posts learned that register from posts like `cancun.md` | ADR-007 §9, qa §8b | #50 | stratified spike, hardest tier |
 | 24 | A measured baseline dates as models change, fastest at the vocabulary layer | ADR-007 §3, trd §8.0 | #51 | measurement date shipped with the baseline |

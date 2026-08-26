@@ -2,11 +2,8 @@
 /**
  * Doc consistency checker. No dependencies. Run: node scripts/check-docs.mjs
  *
- * Exists because the same failure happened three times during authoring: something
- * specified in one doc and never propagated to the others. Prose cannot enforce that.
- * This can.
- *
- * Exit 0 = consistent. Exit 1 = drift. Exit 2 = the checker itself broke.
+ * Exists because the same drift happened three times: specified in one doc, never
+ * propagated. Exit 0 consistent, 1 drift, 2 the checker broke.
  */
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve, relative } from 'node:path';
