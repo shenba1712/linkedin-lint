@@ -147,23 +147,25 @@ The `\` handling in the first branch is what makes the function **idempotent**. 
 matters: `\` is itself reserved, so a naive "escape every reserved character"
 implementation double-escapes an already-escaped string and corrupts it.
 
-### 3.3 The three properties
+### 3.3 The properties
 
-All property-tested over generated inputs containing every reserved character in
+Both property-tested over generated inputs containing every reserved character in
 random positions:
 
 ```
-escape(escape(s)) === escape(s)                 // idempotent, always
-unescape(escape(s)) === s                       // lossless, s not already escaped
-escape(unescape(escape(s))) === escape(s)       // stable, always
+escape(escape(s)) === escape(s)     // idempotent, ALWAYS
+unescape(escape(s)) === s           // lossless, s has no `\` before a reserved char
 ```
 
 The first matters because the escaper can run more than once in a pipeline.
 
-**The second is qualified**: `escape` is idempotent, so `(` and `\(` produce the same
-output and it cannot be inverted for both. Corrected 2026-08-11 — see
-[ADR-002](./adr/ADR-002-escaping-is-the-core.md). The third is the universal
-replacement: the escaped form does not drift across a round trip.
+**The second is qualified**, and there is no universal third. `escape` is idempotent so
+it is not injective; and `escape(unescape(escape(s)))` is *also* not stable in general —
+`\\<` demonstrates it. Corrected twice; see
+[ADR-002](./adr/ADR-002-escaping-is-the-core.md).
+
+**Escape as often as you like; never unescape in the middle of a pipeline.**
+Idempotence makes the first safe. Nothing makes the second safe — see ADR-002.
 
 ### 3.4 What is not touched
 

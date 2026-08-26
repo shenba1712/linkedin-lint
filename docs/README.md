@@ -38,9 +38,10 @@ Then as needed:
 
 ### Phase 0a — Escaping (publishable alone)
 - [ ] `escape(escape(s)) === escape(s)` over 10,000+ generated inputs
-- [ ] `unescape(escape(s)) === s` over the same, **for input that is not already
-      escaped** — `escape` is idempotent so it is not injective (ADR-002)
-- [ ] `escape(unescape(escape(s))) === escape(s)` over the same — the universal one
+- [ ] `unescape(escape(s)) === s` over the same, **for input with no `\` before a
+      reserved character** — `escape` is idempotent so it is not injective (ADR-002)
+- [ ] The non-stability of `escape(unescape(escape(s)))` is pinned by a test, so the
+      false universal claim cannot return
 - [ ] All table cases E1–E18 pass
 - [ ] Every real published post round-trips exactly
 - [ ] The `pick()` post is a fixture
@@ -92,7 +93,7 @@ Then as needed:
 
 | Invariant | Stated in |
 | --- | --- |
-| Escaping is idempotent always, lossless on **unescaped** input, and the escaped form is stable | ADR-002, trd §3.3, qa §2.2, CLAUDE.md §2 |
+| Escaping is idempotent always, and lossless on input with no `\` before a reserved character. **No universal round-trip property exists** | ADR-002, trd §3.3, qa §2.2, CLAUDE.md §2 |
 | Only three rule groups produce `error` | prd §6, rules-reference, ADR-004, CLAUDE.md |
 | Zero runtime dependencies | ADR-005, trd §12, devops §2, CLAUDE.md |
 | The core is pure — no I/O, no clock, no randomness | ADR-005, trd §1, CLAUDE.md |

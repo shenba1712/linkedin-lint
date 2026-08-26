@@ -56,30 +56,35 @@ for each code point c at index i:
   offsets, so a caller can highlight the danger instead of silently transforming.
 - **Parentheses get their own rule id**, `escape/unescaped-paren`, separate from other
   reserved characters, because their failure mode is the catastrophic one.
-- Three properties, property-tested over at least 10,000 generated inputs:
+- **One property holds universally, and one holds on raw input:**
 
   ```
-  escape(escape(s)) === escape(s)                     // always
-  unescape(escape(s)) === s                           // s not already escaped
-  escape(unescape(escape(s))) === escape(s)           // always
+  escape(escape(s)) === escape(s)     // ALWAYS. Escape as many times as you like
+  unescape(escape(s)) === s           // s contains no `\` before a reserved character
   ```
 
-  **Corrected 2026-08-11.** The second property was stated unqualified and is false.
-  `escape` is idempotent, so `escape('\(') === '\('` — which means `(` and `\(` produce
-  the *same* output. One output, two inputs: **`escape` is not injective and cannot be
-  inverted for both.** Verified by running it.
+  Property-tested over 10,000 generated inputs each, with a fixed seed so failures
+  reproduce.
 
-  Idempotence and universal losslessness are incompatible, and this ADR chose idempotence
-  deliberately, because the escaper can run twice in a pipeline. So losslessness is
-  qualified to unescaped input — which is the realistic case, a draft rather than a
-  partly-escaped string.
+  **Corrected twice, 2026-08-11 and 2026-08-26.** Both corrections were the same mistake:
+  a property reasoned through on hand-picked examples instead of generated ones.
 
-  The third property is the universal replacement, and it is the one a consumer actually
-  depends on: **what gets sent to LinkedIn does not change if the text passes through the
-  pipeline twice**, even when it was already escaped.
+  *First:* `unescape(escape(s)) === s` was stated unqualified. `escape` is idempotent, so
+  `escape('\(') === '\('` and both `(` and `\(` produce the same output — it is not
+  injective and cannot be inverted for both.
 
-  Caught before `#05` was written. The generated inputs there include reserved characters,
-  so they would have produced `\(` and failed the property as originally stated.
+  *Second:* the replacement offered for it, `escape(unescape(escape(s))) === escape(s)`,
+  was claimed universal and **is also false.** `\\<` escapes to `\\\<`; unescape reads
+  `\\`→`\` then `\<`→`<`, giving `\<`; re-escaping that is idempotent, so it stays `\<`.
+  Found by the generated suite in `#05`, shrunk from 40 characters to `\\<`.
+
+  **The loss happens at unescape, not at escape.** Once text contains a backslash before a
+  reserved character, nothing can tell "the author typed a backslash" from "this was
+  already escaped", and unescaping destroys the distinction for good.
+
+  So the guidance for consumers is one line: **escape as often as you like, and never
+  unescape in the middle of a pipeline.** Idempotence makes the first safe. Nothing makes
+  the second safe.
 
 - All `escape/*` findings are `error` severity, and **cannot be suppressed**.
   Suppressing them means publishing a broken post, and there is no legitimate reason to
@@ -93,9 +98,8 @@ for each code point c at index i:
 - **Idempotence is provable and proven**, which matters because the escaper can run more
   than once in a pipeline. A non-idempotent escaper is a silent corrupter.
 - **Losslessness is the real guarantee, and it is qualified.** `unescape(escape(s)) === s`
-  proves nothing was dropped — for input that was not already escaped. The universal form a
-  consumer depends on is `escape(unescape(escape(s))) === escape(s)`: the body sent to
-  LinkedIn does not drift across a round trip.
+  proves nothing was dropped — for input containing no backslash before a reserved
+  character. **No universal round-trip property exists**, which is the correction above.
 - **Every published post becomes a fixture**, so the suite grows with real inputs rather
   than imagined ones. The README asks specifically for reports of posts that published
   truncated, because that is a missing test case.

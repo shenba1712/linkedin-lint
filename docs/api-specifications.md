@@ -93,22 +93,24 @@ function unescapeCommentary(text: string): string;
 The function that stops posts truncating. Escapes
 `( ) [ ] { } < > @ # * _ ~ | \` for LinkedIn's post-body text format.
 
-Two guaranteed properties, both property-tested:
+Two guaranteed properties, both property-tested over 10,000 generated inputs:
 
 ```ts
-escapeCommentary(escapeCommentary(s)) === escapeCommentary(s)             // always
-unescapeCommentary(escapeCommentary(s)) === s                             // s not already escaped
-escapeCommentary(unescapeCommentary(escapeCommentary(s))) === escapeCommentary(s)   // always
+escapeCommentary(escapeCommentary(s)) === escapeCommentary(s)   // ALWAYS
+unescapeCommentary(escapeCommentary(s)) === s                   // s has no `\` before a reserved char
 ```
 
 Idempotence matters because the escaper may run more than once in a pipeline.
 
 **Losslessness is qualified.** `escapeCommentary` is idempotent, so `(` and `\(` both
-produce `\(` — it is not injective, and text that was *already* escaped cannot be
-recovered. For unescaped input, which is the normal case, it is lossless.
+produce `\(` — not injective, so text that was *already* escaped cannot be recovered.
+For unescaped input, which is the normal case, it is lossless.
 
-The third property is the universal guarantee, and the practical one: **the body you
-send to LinkedIn does not change if the text goes through the pipeline twice.**
+**There is no universal round-trip property.** One was claimed here and is false: `\\<`
+escapes to `\\\<`, unescapes to `\<`, and re-escapes to `\<` rather than back.
+
+**Escape as often as you like; never unescape in the middle of a pipeline.**
+Idempotence makes the first safe. Nothing makes the second safe — see ADR-002.
 
 ```ts
 escapeCommentary('Writing pick() is four lines.')

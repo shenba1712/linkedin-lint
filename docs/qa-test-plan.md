@@ -48,14 +48,21 @@ asserting on stdout, stderr and the exit code.
 
 ### 2.2 Property tests
 
-The three guarantees, over generated inputs that include every reserved character at
+The guarantees, over generated inputs that include every reserved character at
 random positions, plus emoji, newlines and astral-plane characters:
 
 ```
-escape(escape(s)) === escape(s)                 // idempotent, always
-unescape(escape(s)) === s                       // lossless, s NOT already escaped
-escape(unescape(escape(s))) === escape(s)       // stable, always
+escape(escape(s)) === escape(s)     // idempotent, ALWAYS
+unescape(escape(s)) === s           // lossless, s has NO `\` before a reserved char
 ```
+
+Plus two boundary tests: stability holds on raw input, and **fails** on input containing
+an escape sequence — pinned so the false universal claim cannot return.
+
+**And the generators are asserted too.** A corpus that never emitted a backslash would
+pass every property vacuously; the share of inputs containing reserved characters,
+escape sequences, emoji, astral-plane characters and newlines is checked. That check
+caught two wrong thresholds of mine on its first run.
 
 At least 10,000 generated cases. These properties are worth more than the whole
 table above, because they cover the combinations nobody thought to write down.

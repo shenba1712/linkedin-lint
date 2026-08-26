@@ -12,7 +12,8 @@ test that proves it. Add a row when a risk is accepted; never delete one.
 | 1 | An unescaped `(` silently truncates a published post | ADR-002, trd §3 | #03, #08 | E1, E11 |
 | 2 | A non-idempotent escaper corrupts on a second pass | ADR-002 §3.3 | #05 | E10 |
 | 3 | Escaping could lose characters without anyone noticing | trd §3.3 | #05 | E-PROP |
-| 45 | ADR-002 claimed `unescape(escape(s)) === s` unqualified. **False** — `escape` is idempotent, so `(` and `\(` produce the same output and it is not injective. Stated in 9 files; #05 would have generated `\(` and failed | ADR-002 §Decision, trd §3.3, qa §2.2 | #04, #05 | round-trip suite; `escape(unescape(escape(s))) === escape(s)` is the universal replacement |
+| 45 | ADR-002 claimed `unescape(escape(s)) === s` unqualified. **False** — `escape` is idempotent, so `(` and `\(` produce the same output and it is not injective. Stated in 9 files; #05 would have generated `\(` and failed | ADR-002 §Decision, trd §3.3, qa §2.2 | #04, #05 | round-trip suite |
+| 46 | The replacement property `escape(unescape(escape(s))) === escape(s)` was **also** claimed universal and is also false — `\\<` breaks it. Two wrong properties in two tickets, both reasoned on hand-picked examples instead of generated ones. **The loss happens at unescape, not escape** | ADR-002 §Decision | #05 | generated suite found it; counterexample pinned by a test |
 | 4 | A regex hangs inside a consumer's CI | threat-model T1 | #33 | REDOS-1 |
 | 5 | The linter fires on the author's own good writing | ADR-003 | #26, #28 | NEG-1 |
 | 6 | Three common "AI tells" are actually native voice | ADR-003 | #26 | NEG-2 |
