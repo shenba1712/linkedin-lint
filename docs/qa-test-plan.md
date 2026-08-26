@@ -84,9 +84,18 @@ kinds — and unescaped it would publish as two words.
 
 ### 2.4 The worst-case fixture
 
-One synthetic post containing every reserved character, emoji, both unicode bold
-variants, a bracketed URL, mixed newlines, and an already-escaped sequence. If that
-round-trips, the escaper works.
+`test/fixtures/public/worst-case.txt` — every reserved character, emoji, both unicode
+bold variants, a bracketed URL, mixed newlines, and an already-escaped sequence.
+
+**The fixture's contents are asserted, not assumed.** It claimed mixed newlines and had
+13 LF and zero CRLF until 2026-08-26; the spec was right and the file had drifted from
+it. `fixtures.test.ts` now checks all 15 reserved characters, both bold ranges, emoji,
+CRLF *and* bare LF, and the escape sequence are present — so the next drift fails a test
+instead of quietly weakening every assertion built on the file.
+
+**It deliberately does not round-trip.** It contains `\(` on purpose, which is the input
+class `unescape` cannot recover (ADR-002). That limit is asserted too, so nobody
+"fixes" the fixture to make a round-trip test pass.
 
 ### 2.5 The regression rule
 

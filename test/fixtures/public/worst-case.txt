@@ -11,3 +11,5 @@ Emoji pass through untouched: 🚀 💡 😉
 A tracking link: https://example.com/x?a=(b)&c=[d]&e={f}
 
 #shenbabuilds @someone a_b_c ~tilde~ *star* |pipe|
+Mixed newlines matter: this paragraph is separated by CRLF,
+and this line too, while everything above uses LF.
